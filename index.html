@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description"
+        content="">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+        rel="stylesheet">
+
+
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="./static/js/fontawesome.all.min.js"></script>
+  <script src="./static/js/bulma-carousel.min.js"></script>
+  <script src="./static/js/bulma-slider.min.js"></script>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <!-- <script src="http://popcornjs.org/code/dist/popcorn-complete.js"></script> -->
+</head>
+<body>
+
+
+<section class="hero">
+  <div class="hero-body">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column has-text-centered">
+          <h1 class="title is-1 publication-title" style="font-size:28px;">FoundationPose: Unified 6D Pose Estimation and Tracking of Novel Objects</h1>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block">
+              <a href="https://research.nvidia.com/person/bowen-wen">Bowen Wen</a></sup>,
+              <a href="https://research.nvidia.com/person/wei-yang">Wei Yang</a></sup>,
+              <a href="https://research.nvidia.com/person/jan-kautz">Jan Kautz</a></sup>,
+              <a href="https://research.nvidia.com/person/stan-birchfield">Stan Birchfield</a></sup>
+            </span>
+          </div>
+          <br>
+
+          <div class="is-size-5 publication-authors">
+            <span class="author-block"></sup>NVIDIA</span>
+          </div>
+
+          <img src="static/images/nvlogo.png" style="max-height: 150px">
+
+          <div class="column has-text-centered">
+            <div class="publication-links">
+              <!-- PDF Link. -->
+              <span class="link-block">
+                <a href="" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fas fa-file-pdf"></i>
+                  </span>
+                  <span>Paper</span>
+                </a>
+              </span>
+              <!-- Video Link. -->
+              <span class="link-block">
+                <a href="" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fab fa-youtube"></i>
+                  </span>
+                  <span>Video</span>
+                </a>
+              </span>
+              <!-- Code Link. -->
+              <span class="link-block">
+                <a href="" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fab fa-github"></i>
+                  </span>
+                  <span>Code</span>
+                  </a>
+              </span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <!-- Abstract. -->
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Abstract</h2>
+        <div class="content has-text-justified">
+          <p>We present FoundationPose, a unified foundation model for 6D object pose estimation and tracking, supporting both model-based and model-free setups. Our approach can be instantly applied at test-time to a novel object without fine-tuning, as long as its CAD model is given, or a small number of reference images are captured. We bridge the gap between these two setups with a neural implicit representation that allows for effective novel view synthesis, keeping the downstream pose estimation modules invariant under the same unified framework. Strong generalizability is achieved via large-scale synthetic training, aided by a large language model (LLM), a novel transformer-based architecture, and contrastive learning formulation. Extensive evaluation on multiple public datasets involving challenging scenarios and objects indicate our unified approach outperforms existing methods specialized for each task by a large margin. In addition, it even achieves comparable results to instance-level methods despite the reduced assumptions.
+          </p>
+        </div>
+        <img src="static/images/intro.jpg" width="100%">
+      </div>
+    </div>
+
+    <br>
+    <br>
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Robotic Applications</h2>
+        <video style="text-align:center; width:100%" id="v3" autoplay muted loop playsinline controls height="100%">
+          <source src="static/videos/robot_mustard.mp4" type="video/mp4">
+        </video>
+      </div>
+    </div>
+
+    <br>
+    <br>
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">AR Applications</h2>
+        <video style="text-align:center; width:100%" id="v3" autoplay muted loop playsinline controls height="100%">
+          <source src="static/videos/ar_maze.mp4" type="video/mp4">
+        </video>
+        <video style="text-align:center; width:100%" id="v3" autoplay muted loop playsinline controls height="100%">
+          <source src="static/videos/ar_text.mp4" type="video/mp4">
+        </video>
+      </div>
+    </div>
+
+    <br>
+    <br>
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Results on YCB-Video dataset</h2>
+        <p style="text-align: left;">We produce high quality pose results even comparable with the ground truth.</p>
+        <video style="text-align:center; width:100%" id="v3" autoplay muted loop playsinline controls height="100%">
+          <source src="static/videos/ycbv_tracking_c.mp4" type="video/mp4">
+        </video>
+      </div>
+    </div>
+
+
+    <br>
+    <br>
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Overview</h2>
+        <div class="content has-text-justified">
+          <p>To reduce manual efforts for large scale training, we developed a novel synthetic data generation pipeline by leveraging recent emerging techniques and resources including 3D model database, large language models and diffusion models (Sec. 3.1). To bridge the gap between model-free and model-based setup, we leverage an object-centric neural field (Sec. 3.2) for novel view RGBD rendering for subsequent render-and-compare. For pose estimation, we first initialize global poses uniformly around the object, which are then refined by the refinement network (Sec. 3.3). Finally, we forward the refined poses to the pose selection module which predicts their scores. The pose with the best score is selected as output (Sec. 3.4).
+          </p>
+        </div>
+        <img src="static/images/pipeline.jpg" width="100%">
+      </div>
+    </div>
+
+    <br>
+    <br>
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Full Video</h2>
+        <video style="text-align:center; width:100%" id="v3" playsinline controls height="100%">
+          <source src="static/videos/v1c.mp4" type="video/mp4">
+        </video>
+      </div>
+    </div>
+
+
+
+  </div>
+</section>
+
+
+<style>
+model-viewer {
+  width: 400px;
+  height: 300px;
+}
+</style>
+
+
+
+
+<script>
+
+  var data_ap13 = {
+    "gt":{
+      "video":"https://i.imgur.com/yY0myqN.mp4",
+      "model":"static/models/AP13/AP13_gt.glb"
+    },
+    "ours":{
+      "video":"https://i.imgur.com/JtkzjxE.mp4",
+      "model":"static/models/AP13/AP13_ours_smoothed.glb"
+    },
+    "nice":{
+      "video":"https://i.imgur.com/EgVtkCm.mp4",
+      "model":"static/models/AP13/AP13_nice_slam_smoothed.glb"
+    },
+    "bundletrack":{
+      "video":"https://i.imgur.com/HRucAz7.mp4",
+      "model":"static/models/AP13/AP13_bundletrack_smoothed.glb"
+    },
+    "droid":{
+      "video":"https://i.imgur.com/lCFKtBy.mp4",
+      "model":"static/models/AP13/AP13_droid_smoothed.glb"
+    },
+    "sdf":{
+      "video":"https://i.imgur.com/kjyIrWL.mp4",
+      "model":"static/models/AP13/AP13_sdf2sdf_smoothed.glb"
+    },
+    "kinect":{
+      "video":"https://i.imgur.com/OLPiGdv.mp4",
+      "model":"static/models/AP13/AP13_kinectfusion_smoothed.glb"
+    },
+  }
+  var data_bechair = {
+    "gt":{
+      "video":"https://i.imgur.com/mVlaaMJ.mp4",
+      "model":"static/models/bechair/gt.glb"
+    },
+    "ours":{
+      "video":"https://i.imgur.com/wrfJii7.mp4",
+      "model":"static/models/bechair/ours_smoothed.glb"
+    },
+    "nice":{
+      "video":"https://i.imgur.com/3e4BWZv.mp4",
+      "model":"static/models/bechair/nice_slam_smoothed.glb"
+    },
+    "bundletrack":{
+      "video":"https://i.imgur.com/qApkCnT.mp4",
+      "model":"static/models/bechair/bundletrack_smoothed.glb"
+    },
+    "droid":{
+      "video":"https://i.imgur.com/eXfkoG0.mp4",
+      "model":"static/models/bechair/droid_smoothed.glb"
+    },
+    "sdf":{
+      "video":"https://i.imgur.com/skH4FnF.mp4",
+      "model":"static/models/bechair/sdf2sdf_smoothed.glb"
+    },
+    "kinect":{
+      "video":"https://i.imgur.com/z0fpUBs.mp4",
+      "model":"static/models/bechair/kinectfusion_smoothed.glb"
+    },
+  }
+  var data_betable = {
+    "gt":{
+      "video":"https://i.imgur.com/YwW4BgA.mp4",
+      "model":"static/models/betable/gt.glb"
+    },
+    "ours":{
+      "video":"https://i.imgur.com/Dk2kEpZ.mp4",
+      "model":"static/models/betable/ours.glb"
+    },
+    "nice":{
+      "video":"https://i.imgur.com/Jo53rx2.mp4",
+      "model":"static/models/betable/nice_slam.glb"
+    },
+    "bundletrack":{
+      "video":"https://i.imgur.com/c5tRxlK.mp4",
+      "model":"static/models/betable/bundletrack.glb"
+    },
+    "droid":{
+      "video":"https://i.imgur.com/vlaLgbB.mp4",
+      "model":"static/models/betable/droid.glb"
+    },
+    "sdf":{
+      "video":"https://i.imgur.com/4YHXF5h.mp4",
+      "model":"static/models/betable/sdf2sdf.glb"
+    },
+    "kinect":{
+      "video":"https://i.imgur.com/Br38KTb.mp4",
+      "model":"static/models/betable/kinectfusion_smoothed.glb"
+    },
+  }
+  var data_mustard = {
+    "gt":{
+      "video":"https://i.imgur.com/fc3dstr.mp4",
+      "model":"static/models/mustard/gt.glb"
+    },
+    "ours":{
+      "video":"https://i.imgur.com/Gj7xhYV.mp4",
+      "model":"static/models/mustard/ours_smoothed.glb"
+    },
+    "nice":{
+      "video":"https://i.imgur.com/Eyh72qh.mp4",
+      "model":"static/models/mustard/nice_slam_smoothed.glb"
+    },
+    "bundletrack":{
+      "video":"https://i.imgur.com/a21uzSG.mp4",
+      "model":"static/models/mustard/bundletrack_smoothed.glb"
+    },
+    "droid":{
+      "video":"https://i.imgur.com/yP7TXyc.mp4",
+      "model":"static/models/mustard/droid_smoothed.glb"
+    },
+    "sdf":{
+      "video":"https://i.imgur.com/T1muS4v.mp4",
+      "model":"static/models/mustard/sdf2sdf_smoothed.glb"
+    },
+    "kinect":{
+      "video":"https://i.imgur.com/NFROU0f.mp4",
+      "model":"static/models/mustard/kinectfusion_smoothed.glb"
+    },
+  }
+  var data_sm1 = {
+    "gt":{
+      "video":"https://i.imgur.com/UNGUkEl.mp4",
+      "model":"static/models/sm1/gt.glb"
+    },
+    "ours":{
+      "video":"https://i.imgur.com/cFos4Fq.mp4",
+      "model":"static/models/sm1/ours_smoothed.glb"
+    },
+    "nice":{
+      "video":"https://i.imgur.com/KwkC5KN.mp4",
+      "model":"static/models/sm1/nice_slam_smoothed.glb"
+    },
+    "bundletrack":{
+      "video":"https://i.imgur.com/y2CrSZg.mp4",
+      "model":"static/models/sm1/bundletrack_smoothed.glb"
+    },
+    "droid":{
+      "video":"https://i.imgur.com/YQyNFkf.mp4",
+      "model":"static/models/sm1/droid_smoothed.glb"
+    },
+    "sdf":{
+      "video":"https://i.imgur.com/wEs8gzc.mp4",
+      "model":"static/models/sm1/sdf2sdf_smoothed.glb"
+    },
+    "kinect":{
+      "video":"https://i.imgur.com/p90r5Oi.mp4",
+      "model":"static/models/sm1/kinectfusion_smoothed.glb"
+    },
+  }
+
+  data = data_ap13;
+  function sync1to2video() {
+    document.getElementById('v1').currentTime = 0;
+    document.getElementById('v2').currentTime = 0;
+  }
+
+  v1 = document.getElementById("v1")
+  v2 = document.getElementById("v2")
+
+  m1 = document.getElementById("m1")
+  m2 = document.getElementById("m2")
+
+
+  method1 = 'gt';
+  method2 = 'ours';
+
+  function update_buttons()
+  {
+    document.getElementById('ap13').className = 'button is-normal is-rounded';
+    document.getElementById('sm1').className = 'button is-normal is-rounded';
+    document.getElementById('bechair').className = 'button is-normal is-rounded';
+    document.getElementById('betable').className = 'button is-normal is-rounded';
+    document.getElementById('mustard').className = 'button is-normal is-rounded';
+
+    v1.setAttribute('src', data[method1]['video']);
+    m1.setAttribute('src', data[method1]['model']);
+
+    v2.setAttribute('src', data[method2]['video']);
+    m2.setAttribute('src', data[method2]['model']);
+
+  }
+  // DATA LOADING
+  btn_ap13 = document.getElementById('ap13');
+  btn_ap13.addEventListener('click', function onClick() {
+    data = data_ap13;
+    update_buttons();
+    btn_ap13.className = 'button is-info is-rounded';
+    // set the video
+
+
+  });
+
+  btn_sm1 = document.getElementById('sm1');
+  btn_sm1.addEventListener('click', function onClick() {
+    data = data_sm1;
+    update_buttons();
+    btn_sm1.className = 'button is-info is-rounded';
+    // set the video
+  });
+
+  btn_bechair = document.getElementById('bechair');
+  btn_bechair.addEventListener('click', function onClick() {
+    data = data_bechair;
+    update_buttons();
+    btn_bechair.className = 'button is-info is-rounded';
+    // set the video
+  });
+
+  btn_betable = document.getElementById('betable');
+  btn_betable.addEventListener('click', function onClick() {
+    data=data_betable;
+    update_buttons();
+    btn_betable.className = 'button is-info is-rounded';
+    // set the video
+  });
+
+  btn_mustard = document.getElementById('mustard');
+  btn_mustard.addEventListener('click', function onClick() {
+    data = data_mustard;
+    update_buttons();
+    btn_mustard.className = 'button is-info is-rounded';
+    // set the video
+  });
+
+
+
+  btn_1gt = document.getElementById('1_gt');
+  btn_1gt.addEventListener('click', function onClick() {
+
+    btn_1gt.className = 'button is-info is-rounded';
+    // document.getElementById('1_gt').className = 'button is-normal is-rounded';
+    document.getElementById('1_ours').className = 'button is-normal is-rounded';
+    document.getElementById('1_bundletrack').className = 'button is-normal is-rounded';
+    document.getElementById('1_droid').className = 'button is-normal is-rounded';
+    document.getElementById('1_sdf').className = 'button is-normal is-rounded';
+    document.getElementById('1_nice').className = 'button is-normal is-rounded';
+    document.getElementById('1_kinect').className = 'button is-normal is-rounded';
+    // set the video
+    v1.setAttribute('src', data['gt']['video']);
+    m1.setAttribute('src', data['gt']['model']);
+    method1 = "gt";
+    sync1to2video();
+  });
+
+  btn_ours1 = document.getElementById('1_ours');
+  btn_ours1.addEventListener('click', function onClick() {
+
+    btn_ours1.className = 'button is-info is-rounded';
+    document.getElementById('1_gt').className = 'button is-normal is-rounded';
+    // document.getElementById('1_ours').className = 'button is-normal is-rounded';
+    document.getElementById('1_bundletrack').className = 'button is-normal is-rounded';
+    document.getElementById('1_droid').className = 'button is-normal is-rounded';
+    document.getElementById('1_sdf').className = 'button is-normal is-rounded';
+    document.getElementById('1_nice').className = 'button is-normal is-rounded';
+    document.getElementById('1_kinect').className = 'button is-normal is-rounded';
+
+    v1.setAttribute('src', data['ours']['video']);
+    m1.setAttribute('src', data['ours']['model']);
+    method1 = "ours";
+    sync1to2video();
+
+  });
+
+  btn_1nice = document.getElementById('1_nice');
+  btn_1nice.addEventListener('click', function onClick() {
+
+    btn_1nice.className = 'button is-info is-rounded';
+    document.getElementById('1_gt').className = 'button is-normal is-rounded';
+    document.getElementById('1_ours').className = 'button is-normal is-rounded';
+    document.getElementById('1_bundletrack').className = 'button is-normal is-rounded';
+    document.getElementById('1_droid').className = 'button is-normal is-rounded';
+    document.getElementById('1_sdf').className = 'button is-normal is-rounded';
+    // document.getElementById('1_nice').className = 'button is-normal is-rounded';
+    document.getElementById('1_kinect').className = 'button is-normal is-rounded';
+
+    v1.setAttribute('src', data['nice']['video']);
+    m1.setAttribute('src', data['nice']['model']);
+    method1 = "nice";
+    sync1to2video();
+
+  });
+
+  btn_1bundle = document.getElementById('1_bundletrack');
+  btn_1bundle.addEventListener('click', function onClick() {
+
+    btn_1bundle.className = 'button is-info is-rounded';
+    document.getElementById('1_gt').className = 'button is-normal is-rounded';
+    document.getElementById('1_ours').className = 'button is-normal is-rounded';
+    // document.getElementById('1_bundletrack').className = 'button is-normal is-rounded';
+    document.getElementById('1_droid').className = 'button is-normal is-rounded';
+    document.getElementById('1_sdf').className = 'button is-normal is-rounded';
+    document.getElementById('1_nice').className = 'button is-normal is-rounded';
+    document.getElementById('1_kinect').className = 'button is-normal is-rounded';
+
+    v1.setAttribute('src', data['bundletrack']['video']);
+    m1.setAttribute('src', data['bundletrack']['model']);
+    method1 = "bundletrack";
+    sync1to2video();
+
+  });
+
+  btn_1droid = document.getElementById('1_droid');
+  btn_1droid.addEventListener('click', function onClick() {
+
+    btn_1droid.className = 'button is-info is-rounded';
+    document.getElementById('1_gt').className = 'button is-normal is-rounded';
+    document.getElementById('1_ours').className = 'button is-normal is-rounded';
+    document.getElementById('1_bundletrack').className = 'button is-normal is-rounded';
+    // document.getElementById('1_droid').className = 'button is-normal is-rounded';
+    document.getElementById('1_sdf').className = 'button is-normal is-rounded';
+    document.getElementById('1_nice').className = 'button is-normal is-rounded';
+    document.getElementById('1_kinect').className = 'button is-normal is-rounded';
+
+    v1.setAttribute('src', data['droid']['video']);
+    m1.setAttribute('src', data['droid']['model']);
+    method1 = "droid";
+    sync1to2video();
+
+  });
+
+  btn_1sdf = document.getElementById('1_sdf');
+  btn_1sdf.addEventListener('click', function onClick() {
+
+    btn_1sdf.className = 'button is-info is-rounded';
+    document.getElementById('1_gt').className = 'button is-normal is-rounded';
+    document.getElementById('1_ours').className = 'button is-normal is-rounded';
+    document.getElementById('1_bundletrack').className = 'button is-normal is-rounded';
+    document.getElementById('1_droid').className = 'button is-normal is-rounded';
+    // document.getElementById('1_sdf').className = 'button is-normal is-rounded';
+    document.getElementById('1_nice').className = 'button is-normal is-rounded';
+    document.getElementById('1_kinect').className = 'button is-normal is-rounded';
+
+    v1.setAttribute('src', data['sdf']['video']);
+    m1.setAttribute('src', data['sdf']['model']);
+    method1 = "sdf";
+    sync1to2video();
+
+  });
+
+  btn_1kinect = document.getElementById('1_kinect');
+  btn_1kinect.addEventListener('click', function onClick() {
+
+    btn_1kinect.className = 'button is-info is-rounded';
+    document.getElementById('1_gt').className = 'button is-normal is-rounded';
+    document.getElementById('1_ours').className = 'button is-normal is-rounded';
+    document.getElementById('1_bundletrack').className = 'button is-normal is-rounded';
+    document.getElementById('1_droid').className = 'button is-normal is-rounded';
+    document.getElementById('1_sdf').className = 'button is-normal is-rounded';
+    document.getElementById('1_nice').className = 'button is-normal is-rounded';
+    // document.getElementById('1_kinect').className = 'button is-normal is-rounded';
+
+    v1.setAttribute('src', data['kinect']['video']);
+    m1.setAttribute('src', data['kinect']['model']);
+    method1 = "kinect";
+    sync1to2video();
+
+  });
+
+// 222222
+
+
+  btn_2gt = document.getElementById('2_gt');
+  console.log(btn_2gt)
+  btn_2gt.addEventListener('click', function onClick() {
+
+    btn_2gt.className = 'button is-info is-rounded';
+    // document.getElementById('2_gt').className = 'button is-normal is-rounded';
+    document.getElementById('2_ours').className = 'button is-normal is-rounded';
+    document.getElementById('2_bundletrack').className = 'button is-normal is-rounded';
+    document.getElementById('2_droid').className = 'button is-normal is-rounded';
+    document.getElementById('2_sdf').className = 'button is-normal is-rounded';
+    document.getElementById('2_nice').className = 'button is-normal is-rounded';
+    document.getElementById('2_kinect').className = 'button is-normal is-rounded';
+
+    v2.setAttribute('src', data['gt']['video']);
+    m2.setAttribute('src', data['gt']['model']);
+    method2 = "gt";
+    sync1to2video();
+
+  });
+
+  btn_2ours = document.getElementById('2_ours');
+  btn_2ours.addEventListener('click', function onClick() {
+
+    btn_2ours.className = 'button is-info is-rounded';
+    document.getElementById('2_gt').className = 'button is-normal is-rounded';
+    // document.getElementById('2_ours').className = 'button is-normal is-rounded';
+    document.getElementById('2_bundletrack').className = 'button is-normal is-rounded';
+    document.getElementById('2_droid').className = 'button is-normal is-rounded';
+    document.getElementById('2_sdf').className = 'button is-normal is-rounded';
+    document.getElementById('2_nice').className = 'button is-normal is-rounded';
+    document.getElementById('2_kinect').className = 'button is-normal is-rounded';
+
+    v2.setAttribute('src', data['ours']['video']);
+    m2.setAttribute('src', data['ours']['model']);
+    method2 = "ours";
+    sync1to2video();
+
+  });
+
+  btn_2nice = document.getElementById('2_nice');
+  btn_2nice.addEventListener('click', function onClick() {
+
+    btn_2nice.className = 'button is-info is-rounded';
+    document.getElementById('2_gt').className = 'button is-normal is-rounded';
+    document.getElementById('2_ours').className = 'button is-normal is-rounded';
+    document.getElementById('2_bundletrack').className = 'button is-normal is-rounded';
+    document.getElementById('2_droid').className = 'button is-normal is-rounded';
+    document.getElementById('2_sdf').className = 'button is-normal is-rounded';
+    // document.getElementById('2_nice').className = 'button is-normal is-rounded';
+    document.getElementById('2_kinect').className = 'button is-normal is-rounded';
+
+    v2.setAttribute('src', data['nice']['video']);
+    m2.setAttribute('src', data['nice']['model']);
+    method2 = "nice";
+    sync1to2video();
+
+  });
+
+  btn_2bundle = document.getElementById('2_bundletrack');
+  btn_2bundle.addEventListener('click', function onClick() {
+
+    btn_2bundle.className = 'button is-info is-rounded';
+    document.getElementById('2_gt').className = 'button is-normal is-rounded';
+    document.getElementById('2_ours').className = 'button is-normal is-rounded';
+    // document.getElementById('2_bundletrack').className = 'button is-normal is-rounded';
+    document.getElementById('2_droid').className = 'button is-normal is-rounded';
+    document.getElementById('2_sdf').className = 'button is-normal is-rounded';
+    document.getElementById('2_nice').className = 'button is-normal is-rounded';
+    document.getElementById('2_kinect').className = 'button is-normal is-rounded';
+
+    v2.setAttribute('src', data['bundletrack']['video']);
+    m2.setAttribute('src', data['bundletrack']['model']);
+    method2 = "bundletrack";
+    sync1to2video();
+
+  });
+
+  btn_2droid = document.getElementById('2_droid');
+  btn_2droid.addEventListener('click', function onClick() {
+
+    btn_2droid.className = 'button is-info is-rounded';
+    document.getElementById('2_gt').className = 'button is-normal is-rounded';
+    document.getElementById('2_ours').className = 'button is-normal is-rounded';
+    document.getElementById('2_bundletrack').className = 'button is-normal is-rounded';
+    // document.getElementById('2_droid').className = 'button is-normal is-rounded';
+    document.getElementById('2_sdf').className = 'button is-normal is-rounded';
+    document.getElementById('2_nice').className = 'button is-normal is-rounded';
+    document.getElementById('2_kinect').className = 'button is-normal is-rounded';
+
+    v2.setAttribute('src', data['droid']['video']);
+    m2.setAttribute('src', data['droid']['model']);
+    method2 = "droid";
+    sync1to2video();
+
+  });
+
+  btn_2sdf = document.getElementById('2_sdf');
+  btn_2sdf.addEventListener('click', function onClick() {
+
+    btn_2sdf.className = 'button is-info is-rounded';
+    document.getElementById('2_gt').className = 'button is-normal is-rounded';
+    document.getElementById('2_ours').className = 'button is-normal is-rounded';
+    document.getElementById('2_bundletrack').className = 'button is-normal is-rounded';
+    document.getElementById('2_droid').className = 'button is-normal is-rounded';
+    // document.getElementById('2_sdf').className = 'button is-normal is-rounded';
+    document.getElementById('2_nice').className = 'button is-normal is-rounded';
+    document.getElementById('2_kinect').className = 'button is-normal is-rounded';
+
+    v2.setAttribute('src', data['sdf']['video']);
+    m2.setAttribute('src', data['sdf']['model']);
+    method2 = "sdf";
+    sync1to2video();
+
+  });
+
+  btn_2kinect = document.getElementById('2_kinect');
+  btn_2kinect.addEventListener('click', function onClick() {
+
+    btn_2kinect.className = 'button is-info is-rounded';
+    document.getElementById('2_gt').className = 'button is-normal is-rounded';
+    document.getElementById('2_ours').className = 'button is-normal is-rounded';
+    document.getElementById('2_bundletrack').className = 'button is-normal is-rounded';
+    document.getElementById('2_droid').className = 'button is-normal is-rounded';
+    document.getElementById('2_sdf').className = 'button is-normal is-rounded';
+    document.getElementById('2_nice').className = 'button is-normal is-rounded';
+    // document.getElementById('2_kinect').className = 'button is-normal is-rounded';
+
+    v2.setAttribute('src', data['kinect']['video']);
+    m2.setAttribute('src', data['kinect']['model']);
+    method2 = "kinect";
+    sync1to2video();
+  });
+
+// Original script to synchronize playback of two HTML5 video windows
+  // by Adam Pierce.
+  // http://siliconsparrow.com/synchronize-two-video-replays-using-javascript/
+  // This script is public domain. You can copy, modify and share it as much
+  // as you like.
+
+  // sync 2nd (right) video to playing position of 1st (left) video
+  window.onload = function(){
+        var v1 = document.getElementById('v1');
+        // console.log("YEAH");
+        v1.addEventListener("play", function() {
+          document.getElementById('v2').play();
+        });
+
+        v1.addEventListener("pause", function() {
+          document.getElementById('v2').pause();
+        });
+
+        v1.addEventListener("seeking", function() {
+          document.getElementById('v2').currentTime = v1.currentTime;
+        });
+
+        v1.addEventListener("seeked", function() {
+          document.getElementById('v2').currentTime = v1.currentTime;
+        });
+        v1.addEventListener("onloadstart", function() {
+          document.getElementById('v2').currentTime = v1.currentTime;
+        });
+
+  }
+
+</script>
+
+
+<footer class="footer">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-8">
+        <div class="content">
+          <p>
+            Website taken from
+              <a href="https://github.com/nerfies/nerfies.github.io">here</a>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
