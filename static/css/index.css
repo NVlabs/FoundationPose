@@ -68,27 +68,24 @@ body {
     font-weight: bolder;
 }
 
-.publication-authors {
-}
 
 .publication-authors a {
-   color: hsl(204, 86%, 53%) !important;
+  color: rgb(118, 185, 0) !important;
+  text-decoration: underline;
 }
 
-.publication-authors a:hover {
-    text-decoration: underline;
-}
 
 .author-block {
   display: inline-block;
 }
 
+.author-block a:href {
+  color: rgb(118, 185, 0);
+}
+
 .publication-banner img {
 }
 
-.publication-authors {
-  /*color: #4286f4;*/
-}
 
 .publication-video {
     position: relative;
