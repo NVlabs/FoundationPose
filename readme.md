@@ -19,20 +19,17 @@ We present FoundationPose, a unified foundation model for 6D object pose estimat
 Robotic Applications:
 
 <video style="text-align:center" autoplay muted loop playsinline controls width="80%">
-  <source src="assets/robot_mustard.mp4" type="video/mp4">
+  <source src="https://github.com/NVlabs/FoundationPose/blob/main/assets/robot_mustard.mp4" type="video/mp4">
 </video>
 
 AR Applications:
 
-<video style="text-align:center" autoplay muted loop playsinline controls width="80%">
-  <source src="assets/ar_maze_c.mp4" type="video/mp4">
-</video>
+https://github.com/NVlabs/FoundationPose/assets/23078192/80e96855-a73c-4bee-bcef-7cba92df55ca
+
 
 Results on YCB-Video dataset:
 
-<video style="text-align:center" autoplay muted loop playsinline controls width="80%">
-  <source src="assets/ycbv_tracking_c.mp4" type="video/mp4">
-</video>
+https://github.com/NVlabs/FoundationPose/assets/23078192/9b5bedde-755b-44ed-a973-45ec85a10bbe
 
 
 
