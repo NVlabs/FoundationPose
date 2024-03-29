@@ -83,20 +83,51 @@ docker exec -it foundationpose bash
 ```
 
 # Env setup option 2: conda (experimental)
+
+- Install Eigen3 3.4.0
+
+```bash
+cd $HOME && wget -q https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz && \
+tar -xzf eigen-3.4.0.tar.gz && \
+cd eigen-3.4.0 && mkdir build && cd build
+cmake .. -Wno-dev -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=-std=c++14 ..
+sudo make install
+cd $HOME && rm -rf eigen-3.4.0 eigen-3.4.0.tar.gz
 ```
-create -n foundationpose python=3.8
+
+- Setup conda environment
+
+```bash
+# create conda environment
+create -n foundationpose python=3.9
+
+# activate conda environment
 conda activate foundationpose
-pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 torchaudio==2.0.1 --index-url https://download.pytorch.org/whl/cu118
-pip install "git+https://github.com/facebookresearch/pytorch3d.git@stable"
-pip install scipy joblib scikit-learn ruamel.yaml trimesh pyyaml opencv-python imageio open3d transformations warp-lang einops kornia pyrender pysdf
-pip install git+https://github.com/facebookresearch/segment-anything.git
-git clone https://github.com/NVlabs/nvdiffrast
-cd nvdiffrast && pip install .
-pip install scikit-image meshcat webdataset omegaconf pypng Panda3D simplejson bokeh roma seaborn pin opencv-contrib-python openpyxl torchnet Panda3D bokeh wandb colorama GPUtil imgaug Ninja xlsxwriter timm albumentations xatlas rtree nodejs jupyterlab objaverse g4f ultralytics==8.0.120 pycocotools py-spy pybullet videoio numba
-pip install -U git+https://github.com/lilohuang/PyTurboJPEG.git
-conda install -y -c anaconda h5py
-cd foundationpose/ && bash build_all.sh
+
+# install dependencies
+python -m pip install -r requirements.txt
+
+# Install NVDiffRast
+python -m pip install --quiet --no-cache-dir git+https://github.com/NVlabs/nvdiffrast.git
+
+# Install PyTurboJPEG
+# ** install libturbojpeg
+sudo apt-get install libturbojpeg
+python -m pip install --quiet --no-cache-dir git+https://github.com/lilohuang/PyTurboJPEG.git
+
+# Kaolin
+python -m pip install --quiet --no-cache-dir kaolin==0.15.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.0.0_cu118.html
+
+# PyTorch3D
+python -m pip install --quiet --no-index --no-cache-dir pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py39_cu118_pyt200/download.html
+
+# SAM
+python -m pip install --quiet --no-cache-dir git+https://github.com/facebookresearch/segment-anything.git
+
+# Build extensions
+CMAKE_PREFIX_PATH=$CONDA_PREFIX/lib/python3.9/site-packages/pybind11/share/cmake/pybind11 bash build_all_conda.sh
 ```
+
 
 # Run model-based demo
 The paths have been set in argparse by default. If you need to change the scene, you can pass the args accordingly. By running on the demo data, you should be able to see the robot manipulating the mustard bottle. Pose estimation is conducted on the first frame, then it automatically switches to tracking mode for the rest of the video. The resulting visualizations will be saved to the `debug_dir` specified in the argparse. (Note the first time running could be slower due to online compilation)
