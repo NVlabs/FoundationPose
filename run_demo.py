@@ -10,6 +10,7 @@
 from estimater import *
 from datareader import *
 import argparse
+from tqdm.auto import tqdm
 
 
 if __name__=='__main__':
@@ -26,13 +27,18 @@ if __name__=='__main__':
   set_logging_format()
   set_seed(0)
 
-  mesh = trimesh.load(args.mesh_file)
+  print('got mesh_file', args.mesh_file)
+  # mesh = trimesh.load(args.mesh_file)
+  mesh = trimesh.load(args.mesh_file,
+                      force='mesh')
 
   debug = args.debug
   debug_dir = args.debug_dir
   os.system(f'rm -rf {debug_dir}/* && mkdir -p {debug_dir}/track_vis {debug_dir}/ob_in_cam')
 
   to_origin, extents = trimesh.bounds.oriented_bounds(mesh)
+  print('extents', extents)
+  print('origin', to_origin)
   bbox = np.stack([-extents/2, extents/2], axis=0).reshape(2,3)
 
   scorer = ScorePredictor()
@@ -43,13 +49,20 @@ if __name__=='__main__':
 
   reader = YcbineoatReader(video_dir=args.test_scene_dir, shorter_side=None, zfar=np.inf)
 
-  for i in range(len(reader.color_files)):
+  for i in tqdm(range(len(reader.color_files))):
     logging.info(f'i:{i}')
     color = reader.get_color(i)
     depth = reader.get_depth(i)
+    print('color', color.shape)
+    print('depth', depth.shape)
     if i==0:
-      mask = reader.get_mask(0).astype(bool)
+      try:
+          mask = reader.get_mask(0).astype(bool)
+      except AttributeError:
+          mask = None
+      print('<register>')
       pose = est.register(K=reader.K, rgb=color, depth=depth, ob_mask=mask, iteration=args.est_refine_iter)
+      print('</register>')
 
       if debug>=3:
         m = mesh.copy()
@@ -60,17 +73,28 @@ if __name__=='__main__':
         pcd = toOpen3dCloud(xyz_map[valid], color[valid])
         o3d.io.write_point_cloud(f'{debug_dir}/scene_complete.ply', pcd)
     else:
+      print('<track>')
       pose = est.track_one(rgb=color, depth=depth, K=reader.K, iteration=args.track_refine_iter)
+      print('</track>')
 
+    print('<save>')
     os.makedirs(f'{reader.video_dir}/ob_in_cam', exist_ok=True)
     np.savetxt(f'{reader.video_dir}/ob_in_cam/{reader.id_strs[i]}.txt', pose.reshape(4,4))
+    print('</save>')
 
     if debug>=1:
+      print('<draw>')
       center_pose = pose@np.linalg.inv(to_origin)
       vis = draw_posed_3d_box(reader.K, img=color, ob_in_cam=center_pose, bbox=bbox)
       vis = draw_xyz_axis(color, ob_in_cam=center_pose, scale=0.1, K=reader.K, thickness=3, transparency=0, is_input_rgb=True)
-      cv2.imshow('1', vis[...,::-1])
-      cv2.waitKey(1)
+      if False:
+        cv2.imshow('1', vis[...,::-1])
+        cv2.waitKey(1)
+      else:
+        os.makedirs(f'{reader.video_dir}/show', exist_ok=True)
+        # np.savetxt(f'{reader.video_dir}/ob_in_cam/{reader.id_strs[i]}.txt', pose.reshape(4,4))
+        cv2.imwrite(F'{reader.video_dir}/show/{reader.id_strs[i]}.png',vis[...,::-1])
+      print('</draw>')
 
 
     if debug>=2:

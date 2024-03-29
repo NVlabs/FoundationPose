@@ -424,6 +424,11 @@ def depth2xyzmap_batch(depths, Ks, zfar):
   '''
   bs = depths.shape[0]
   invalid_mask = (depths<0.1) | (depths>zfar)
+  # invalid_mask = th.logical_or(
+  #         depths < 0.1,
+  #         depths > zfar
+  # )
+  # (depths<0.1) | (depths>zfar)
   H,W = depths.shape[-2:]
   vs,us = torch.meshgrid(torch.arange(0,H),torch.arange(0,W), indexing='ij')
   vs = vs.reshape(-1).float().cuda()[None].expand(bs,-1)
@@ -607,7 +612,8 @@ def compute_crop_window_tf_batch(pts=None, H=None, W=None, poses=None, K=None, c
                         0,radius,0,
                         0,-radius,0]).reshape(-1,3)
     pts = poses[:,:3,3].reshape(-1,1,3)+offsets.reshape(1,-1,3)
-    K = torch.as_tensor(K)
+    pts = pts.to(dtype=torch.float32)
+    K = torch.as_tensor(K, dtype=torch.float32)
     projected = (K@pts.reshape(-1,3).T).T
     uvs = projected[:,:2]/projected[:,2:3]
     uvs = uvs.reshape(B, -1, 2)
@@ -846,7 +852,10 @@ def pose_to_egocentric_delta_pose(A_in_cam, B_in_cam):
 
 
 def egocentric_delta_pose_to_pose(A_in_cam, trans_delta, rot_mat_delta):
-  '''Used for Pose Refinement. Given the object's two poses in camera, convert them to relative poses in camera's egocentric view
+  '''
+  Used for Pose Refinement.
+  Given the object's two poses in camera,
+  convert them to relative poses in camera's egocentric view
   @A_in_cam: (B,4,4) torch tensor
   '''
   B_in_cam = torch.eye(4, dtype=torch.float, device=A_in_cam.device)[None].expand(len(A_in_cam),-1,-1).contiguous()

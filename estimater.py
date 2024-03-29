@@ -14,6 +14,8 @@ from learning.training.predict_score import *
 from learning.training.predict_pose_refine import *
 import yaml
 
+from pkm.util.torch_util import dcn
+
 
 class FoundationPose:
   def __init__(self, model_pts, model_normals, symmetry_tfs=None, mesh=None, scorer:ScorePredictor=None, refiner:PoseRefinePredictor=None, glctx=None, debug=0, debug_dir='/home/bowen/debug/novel_pose_debug/'):
@@ -21,10 +23,21 @@ class FoundationPose:
     self.ignore_normal_flip = True
     self.debug = debug
     self.debug_dir = debug_dir
-    os.makedirs(debug_dir, exist_ok=True)
+    if debug_dir is not None:
+        os.makedirs(debug_dir, exist_ok=True)
 
-    self.reset_object(model_pts, model_normals, symmetry_tfs=symmetry_tfs, mesh=mesh)
-    self.make_rotation_grid(min_n_views=40, inplane_step=60)
+    if (model_pts is not None) and (model_normals is not None):
+      print('successfully calling reset_object()!')
+      self.reset_object(model_pts,
+                        model_normals,
+                        symmetry_tfs=symmetry_tfs,
+                        mesh=mesh,
+                        down = False)
+    else:
+      self.symmetry_tfs = torch.eye(4).float().cuda()[None]
+
+    self.make_rotation_grid(min_n_views=40,
+                            inplane_step=60)
 
     self.glctx = glctx
 
@@ -41,34 +54,50 @@ class FoundationPose:
     self.pose_last = None   # Used for tracking; per the centered mesh
 
 
-  def reset_object(self, model_pts, model_normals, symmetry_tfs=None, mesh=None):
-    max_xyz = mesh.vertices.max(axis=0)
-    min_xyz = mesh.vertices.min(axis=0)
+  def reset_object(self, model_pts, model_normals, symmetry_tfs=None, mesh=None,
+                   down = False):
+    max_xyz = model_pts.max(axis=-2)
+    min_xyz = model_pts.min(axis=-2)
     self.model_center = (min_xyz+max_xyz)/2
+
     if mesh is not None:
       self.mesh_ori = mesh.copy()
       mesh = mesh.copy()
       mesh.vertices = mesh.vertices - self.model_center.reshape(1,3)
 
-    model_pts = mesh.vertices
-    self.diameter = compute_mesh_diameter(model_pts=mesh.vertices, n_sample=10000)
-    self.vox_size = max(self.diameter/20.0, 0.003)
+    #model_pts = mesh.vertices
+    # self.diameter = compute_mesh_diameter(model_pts=mesh.vertices, n_sample=10000)
+    # self.vox_size = max(self.diameter/20.0, 0.003)
+    # self.diameter = 0.19646325799497472
+    # self.vox_size = 0.009823162899748735
+    # elf.diameter:0.23488557527868753, vox_size:0.011744278763934376
+    self.diameter = 0.23488557527868753
+    self.vox_size = 0.011744278763934376
     logging.info(f'self.diameter:{self.diameter}, vox_size:{self.vox_size}')
     self.dist_bin = self.vox_size/2
     self.angle_bin = 20  # Deg
-    pcd = toOpen3dCloud(model_pts, normals=model_normals)
-    pcd = pcd.voxel_down_sample(self.vox_size)
-    self.max_xyz = np.asarray(pcd.points).max(axis=0)
-    self.min_xyz = np.asarray(pcd.points).min(axis=0)
-    self.pts = torch.tensor(np.asarray(pcd.points), dtype=torch.float32, device='cuda')
-    self.normals = F.normalize(torch.tensor(np.asarray(pcd.normals), dtype=torch.float32, device='cuda'), dim=-1)
+
+    if down:
+        pcd = toOpen3dCloud(model_pts,
+                            normals=model_normals)
+        pcd = pcd.voxel_down_sample(self.vox_size)
+        self.max_xyz = np.asarray(pcd.points).max(axis=0)
+        self.min_xyz = np.asarray(pcd.points).min(axis=0)
+        self.pts = torch.tensor(np.asarray(pcd.points), dtype=torch.float32, device='cuda')
+        self.normals = F.normalize(torch.tensor(np.asarray(pcd.normals),
+                                                dtype=torch.float32, device='cuda'), dim=-1)
+    else:
+        self.pts = model_pts
+        self.normals = model_normals
+
     logging.info(f'self.pts:{self.pts.shape}')
     self.mesh_path = None
     self.mesh = mesh
+
     if self.mesh is not None:
       self.mesh_path = f'/tmp/{uuid.uuid4()}.obj'
       self.mesh.export(self.mesh_path)
-    self.mesh_tensors = make_mesh_tensors(self.mesh)
+      self.mesh_tensors = make_mesh_tensors(self.mesh)
 
     if symmetry_tfs is None:
       self.symmetry_tfs = torch.eye(4).float().cuda()[None]
@@ -135,6 +164,9 @@ class FoundationPose:
 
 
   def guess_translation(self, depth, mask, K):
+    depth = dcn(depth)
+    mask = dcn(mask)
+    K = dcn(K)
     vs,us = np.where(mask>0)
     if len(us)==0:
       logging.info(f'mask is all zero')
@@ -211,7 +243,11 @@ class FoundationPose:
     add_errs = self.compute_add_err_to_gt_pose(poses)
     logging.info(f"after viewpoint, add_errs min:{add_errs.min()}")
 
-    xyz_map = depth2xyzmap(depth, K)
+    if isinstance(depth, np.ndarray):
+        xyz_map = depth2xyzmap(depth, K)
+    else:
+        xyz_map = depth2xyzmap_batch(depth[None], K[None],
+                                     zfar=float('inf'))[0]
     poses, vis = self.refiner.predict(mesh=self.mesh, mesh_tensors=self.mesh_tensors, rgb=rgb, depth=depth, K=K, ob_in_cams=poses.data.cpu().numpy(), normal_map=normal_map, xyz_map=xyz_map, glctx=self.glctx, mesh_diameter=self.diameter, iteration=iteration, get_vis=self.debug>=2)
     if vis is not None:
       imageio.imwrite(f'{self.debug_dir}/vis_refiner.png', vis)
@@ -230,13 +266,16 @@ class FoundationPose:
 
     logging.info(f'sorted scores:{scores}')
 
+    print('best...')
     best_pose = poses[0]@self.get_tf_to_centered_mesh()
     self.pose_last = poses[0]
     self.best_id = ids[0]
 
+    print('save...')
     self.poses = poses
     self.scores = scores
 
+    print('return...')
     return best_pose.data.cpu().numpy()
 
 
@@ -247,8 +286,12 @@ class FoundationPose:
     return -torch.ones(len(poses), device='cuda', dtype=torch.float)
 
 
-  def track_one(self, rgb, depth, K, iteration, extra={}):
-    if self.pose_last is None:
+  def track_one(self, rgb, depth, K, iteration, extra={},
+                pose_last = None):
+    if pose_last is None:
+        pose_last = self.pose_last
+
+    if pose_last is None:
       logging.info("Please init pose by register first")
       raise RuntimeError
     logging.info("Welcome")
@@ -260,11 +303,16 @@ class FoundationPose:
 
     xyz_map = depth2xyzmap_batch(depth[None], torch.as_tensor(K, dtype=torch.float, device='cuda')[None], zfar=np.inf)[0]
 
-    pose, vis = self.refiner.predict(mesh=self.mesh, mesh_tensors=self.mesh_tensors, rgb=rgb, depth=depth, K=K, ob_in_cams=self.pose_last.reshape(1,4,4).data.cpu().numpy(), normal_map=None, xyz_map=xyz_map, mesh_diameter=self.diameter, glctx=self.glctx, iteration=iteration, get_vis=self.debug>=2)
+    pose, vis = self.refiner.predict(mesh=self.mesh, mesh_tensors=self.mesh_tensors, rgb=rgb, depth=depth,
+                                     K=K, ob_in_cams=pose_last.reshape(1,4,4).data.cpu().numpy(),
+                                     normal_map=None, xyz_map=xyz_map, mesh_diameter=self.diameter,
+                                     glctx=self.glctx, iteration=iteration, get_vis=self.debug>=2)
     logging.info("pose done")
     if self.debug>=2:
       extra['vis'] = vis
     self.pose_last = pose
-    return (pose@self.get_tf_to_centered_mesh()).data.cpu().numpy().reshape(4,4)
-
-
+    dpose = self.get_tf_to_centered_mesh()
+    if extra is not None:
+        extra['pose'] = pose
+        extra['pose_center'] = dpose
+    return (pose@dpose).data.cpu().numpy().reshape(4,4)
