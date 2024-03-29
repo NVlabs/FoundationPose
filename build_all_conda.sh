@@ -4,7 +4,7 @@ PROJ_ROOT=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd ${PROJ_ROOT}/mycpp/ && \
 rm -rf build && mkdir -p build && cd build && \
 cmake .. && \
-# make -j$(nproc)
+make -j$(nproc)
 
 # Install mycuda
 cd ${PROJ_ROOT}/bundlesdf/mycuda && \
