@@ -97,7 +97,7 @@ class _FP:
             mesh=mesh,
             scorer=self.scorer,
             refiner=self.refiner,
-            debug_dir=None,
+            debug_dir=cfg.debug_dir,
             debug=cfg.debug,
             glctx=self.glctx
         )
@@ -117,18 +117,11 @@ class _FP:
                 # Workaround for now...
                 i = 0
 
-            ic(
-                frame['intrinsics'][i].shape,
-                frame['color'][i].shape,
-                frame['depth'][i].shape,
-                frame['label'][i].shape,
-            )
-
             pose = self.fp.register(
                 dcn(frame['intrinsics'][i]),
                 dcn(frame['color'][i]),
                 dcn(frame['depth'][i]),
-                # ONLY used once at the beginning
+                # `label` is only used once at the beginning!
                 dcn(frame['label'][i]),
                 iteration=cfg.reg_iter
             )
@@ -141,6 +134,7 @@ class _FP:
         cfg = self.cfg
 
         # Track from 'best view'
+        # FIXME(ycho): batchify
         if True:
             # i = np.random.randint(4)
             i = th.argmax(
@@ -149,12 +143,6 @@ class _FP:
         else:
             i = 0
         extra = {}
-
-        # pose_last = _apply_extrinsics(
-        #     self.__pose_last,
-        #     frame['extrinsics'][self.__cami_last],
-        #     frame['extrinsics'][i]
-        # )
 
         frame = dict(frame)
         frame['extrinsics'] = th.as_tensor(frame['extrinsics'],
@@ -280,21 +268,15 @@ def load_data(device: str = 'cuda'):
 
 
 def main():
-    # load_data()
-    # return
-
     fp = _FP(_FP.Config())
-
     setup: bool = True
     count = 0
     for data in load_data():
         if setup:
             pose = fp.setup(data)
             setup = False
-            # continue
         else:
             pose = fp(data)
-        # i = 0
         i = fp.cami
         vis = draw_pose_axes(dcn(data['color'][i]),
                              dcn(pose),
