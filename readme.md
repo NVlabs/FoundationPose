@@ -1,6 +1,7 @@
 # FoundationPose: Unified 6D Pose Estimation and Tracking of Novel Objects
 [[Paper]](https://arxiv.org/abs/2312.08344) [[Website]](https://nvlabs.github.io/FoundationPose/)
 
+This is an implementation of our paper published in CVPR 2024
 
 Contributors: Bowen Wen, Wei Yang, Jan Kautz, Stan Birchfield
 
@@ -170,7 +171,9 @@ Due to the legal restrictions of Stable-Diffusion that is trained on LAION datas
 
 # Acknowledgement
 
-We would like to thank Jeff Smith for helping with the code release; NVIDIA Isaac Sim and Omniverse team for the support on synthetic data generation; Tianshi Cao for the valuable discussions.
+We would like to thank Jeff Smith for helping with the code release; NVIDIA Isaac Sim and Omniverse team for the support on synthetic data generation; Tianshi Cao for the valuable discussions. Finally, we are also grateful for the positive feebacks and constructive suggestions brought up by reviewers and AC at CVPR.
+
+<img src="assets/cvpr_review.png" width="100%">
 
 
 # License
