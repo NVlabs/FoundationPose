@@ -80,12 +80,3 @@ warp-lang==1.0.2
 
 # For PyTorch3D
 fvcore==0.1.5.post20221221
-
-# Kaolin
-# python -m pip install --quiet --no-cache-dir kaolin==0.15.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.0.0_cu118.html
-# PyTorch3D
-# python -m pip install --quiet --no-index --no-cache-dir pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py39_cu118_pyt200/download.html
-# SAM
-# python -m pip install --quiet --no-cache-dir git+https://github.com/facebookresearch/segment-anything.git
-
-
