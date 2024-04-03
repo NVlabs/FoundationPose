@@ -111,7 +111,7 @@ python -m pip install -r requirements.txt
 # Install NVDiffRast
 python -m pip install --quiet --no-cache-dir git+https://github.com/NVlabs/nvdiffrast.git
 
-# Kaolin
+# Kaolin (Optional, needed if running model-free setup)
 python -m pip install --quiet --no-cache-dir kaolin==0.15.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.0.0_cu118.html
 
 # PyTorch3D

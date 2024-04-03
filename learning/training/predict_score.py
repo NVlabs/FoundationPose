@@ -141,11 +141,6 @@ class ScorePredictor:
       self.cfg['normalize_xyz'] = False
     if 'crop_ratio' not in self.cfg or self.cfg['crop_ratio'] is None:
       self.cfg['crop_ratio'] = 1.2
-    if 'train_num_pair' not in self.cfg or self.cfg['train_num_pair'] is None:
-      self.cfg['train_num_pair'] = 1
-      self.multi_pair = False
-    else:
-      self.multi_pair = True
 
     logging.info(f"self.cfg: \n {OmegaConf.to_yaml(self.cfg)}")
 
@@ -184,55 +179,39 @@ class ScorePredictor:
 
     pose_data = make_crop_data_batch(self.cfg.input_resize, ob_in_cams, mesh, rgb, depth, K, crop_ratio=self.cfg['crop_ratio'], glctx=glctx, mesh_tensors=mesh_tensors, dataset=self.dataset, cfg=self.cfg, mesh_diameter=mesh_diameter)
 
-    bs = 1024
-    if not self.multi_pair:
+    def find_best_among_pairs(pose_data:BatchPoseData):
+      logging.info(f'pose_data.rgbAs.shape[0]: {pose_data.rgbAs.shape[0]}')
+      ids = []
       scores = []
+      bs = pose_data.rgbAs.shape[0]
       for b in range(0, pose_data.rgbAs.shape[0], bs):
-        A = torch.cat([pose_data.rgbAs[b:b+bs].cuda(), pose_data.depthAs[b:b+bs].cuda()], dim=1).float()
-        B = torch.cat([pose_data.rgbBs[b:b+bs].cuda(), pose_data.depthBs[b:b+bs].cuda()], dim=1).float()
+        A = torch.cat([pose_data.rgbAs[b:b+bs].cuda(), pose_data.xyz_mapAs[b:b+bs].cuda()], dim=1).float()
+        B = torch.cat([pose_data.rgbBs[b:b+bs].cuda(), pose_data.xyz_mapBs[b:b+bs].cuda()], dim=1).float()
         if pose_data.normalAs is not None:
           A = torch.cat([A, pose_data.normalAs.cuda().float()], dim=1)
           B = torch.cat([B, pose_data.normalBs.cuda().float()], dim=1)
         with torch.cuda.amp.autocast(enabled=self.amp):
-          output = self.model(A,B)
-        scores_cur = output["score_logit"].float()
+          output = self.model(A, B, L=len(A))
+        scores_cur = output["score_logit"].float().reshape(-1)
+        ids.append(scores_cur.argmax()+b)
         scores.append(scores_cur)
+      ids = torch.stack(ids, dim=0).reshape(-1)
       scores = torch.cat(scores, dim=0).reshape(-1)
+      return ids, scores
 
-    else:
-      def find_best_among_pairs(pose_data:BatchPoseData):
-        logging.info(f'pose_data.rgbAs.shape[0]: {pose_data.rgbAs.shape[0]}')
-        ids = []
-        scores = []
-        bs = pose_data.rgbAs.shape[0]
-        for b in range(0, pose_data.rgbAs.shape[0], bs):
-          A = torch.cat([pose_data.rgbAs[b:b+bs].cuda(), pose_data.xyz_mapAs[b:b+bs].cuda()], dim=1).float()
-          B = torch.cat([pose_data.rgbBs[b:b+bs].cuda(), pose_data.xyz_mapBs[b:b+bs].cuda()], dim=1).float()
-          if pose_data.normalAs is not None:
-            A = torch.cat([A, pose_data.normalAs.cuda().float()], dim=1)
-            B = torch.cat([B, pose_data.normalBs.cuda().float()], dim=1)
-          with torch.cuda.amp.autocast(enabled=self.amp):
-            output = self.model(A, B, L=len(A))
-          scores_cur = output["score_logit"].float().reshape(-1)
-          ids.append(scores_cur.argmax()+b)
-          scores.append(scores_cur)
-        ids = torch.stack(ids, dim=0).reshape(-1)
-        scores = torch.cat(scores, dim=0).reshape(-1)
-        return ids, scores
+    pose_data_iter = pose_data
+    global_ids = torch.arange(len(ob_in_cams), device='cuda', dtype=torch.long)
+    scores_global = torch.zeros((len(ob_in_cams)), dtype=torch.float, device='cuda')
 
-      pose_data_iter = pose_data
-      global_ids = torch.arange(len(ob_in_cams), device='cuda', dtype=torch.long)
-      scores_global = torch.zeros((len(ob_in_cams)), dtype=torch.float, device='cuda')
+    while 1:
+      ids, scores = find_best_among_pairs(pose_data_iter)
+      if len(ids)==1:
+        scores_global[global_ids] = scores + 100
+        break
+      global_ids = global_ids[ids]
+      pose_data_iter = pose_data.select_by_indices(global_ids)
 
-      while 1:
-        ids, scores = find_best_among_pairs(pose_data_iter)
-        if len(ids)==1:
-          scores_global[global_ids] = scores + 100
-          break
-        global_ids = global_ids[ids]
-        pose_data_iter = pose_data.select_by_indices(global_ids)
-
-      scores = scores_global
+    scores = scores_global
 
     logging.info(f'forward done')
     torch.cuda.empty_cache()
