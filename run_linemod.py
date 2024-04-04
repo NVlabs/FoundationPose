@@ -97,7 +97,7 @@ def run_pose_estimation():
 
   res = NestDict()
   glctx = dr.RasterizeCudaContext()
-  mesh_tmp = trimesh.primitives.Box(extents=np.ones((3)), transform=np.eye(4))
+  mesh_tmp = trimesh.primitives.Box(extents=np.ones((3)), transform=np.eye(4)).to_mesh()
   est = FoundationPose(model_pts=mesh_tmp.vertices.copy(), model_normals=mesh_tmp.vertex_normals.copy(), symmetry_tfs=None, mesh=mesh_tmp, scorer=None, refiner=None, glctx=glctx, debug_dir=debug_dir, debug=debug)
 
   for ob_id in reader_tmp.ob_ids:
