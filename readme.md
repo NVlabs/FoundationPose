@@ -1,7 +1,7 @@
 # FoundationPose: Unified 6D Pose Estimation and Tracking of Novel Objects
 [[Paper]](https://arxiv.org/abs/2312.08344) [[Website]](https://nvlabs.github.io/FoundationPose/)
 
-This is an implementation of our paper published in CVPR 2024
+This is the official implementation of our paper to be appeared in CVPR 2024 (Highlight)
 
 Contributors: Bowen Wen, Wei Yang, Jan Kautz, Stan Birchfield
 
@@ -82,6 +82,7 @@ Later you can execute into the container without re-build.
 ```
 docker exec -it foundationpose bash
 ```
+For more recent GPU such as 4090, refer to [this](https://github.com/NVlabs/FoundationPose/issues/27).
 
 # Env setup option 2: conda (experimental)
 
