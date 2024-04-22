@@ -324,3 +324,66 @@ class FoundationPose:
         extra['pose'] = pose
         extra['pose_center'] = dpose
     return (pose@dpose).reshape(4,4)#.data.cpu().numpy().reshape(4,4)
+
+
+
+  def track_one_among_noises(self, rgb, depth, K, iteration, pose_last, sample_num, extra={}):
+    sampled_poses = sample_added_noise(pose_last, sample_n=sample_num)
+    logging.info("Welcome")
+
+    depth = torch.as_tensor(depth, device='cuda', dtype=torch.float)
+    depth = erode_depth(depth, radius=2, device='cuda')
+    depth = bilateral_filter_depth(depth, radius=2, device='cuda')
+    logging.info("depth processing done")
+
+    xyz_map = depth2xyzmap_batch(depth[None], torch.as_tensor(K, dtype=torch.float, device='cuda')[None], zfar=np.inf)[0]
+
+    poses, vis = self.refiner.predict(mesh=self.mesh, mesh_tensors=self.mesh_tensors, rgb=rgb, depth=depth, K=K, ob_in_cams=sampled_poses.reshape(-1,4,4).data.cpu().numpy(), normal_map=None, xyz_map=xyz_map, mesh_diameter=self.diameter, glctx=self.glctx, iteration=iteration, get_vis=self.debug>=2)
+    logging.info("pose done")
+    scores, vis = self.scorer.predict(mesh=self.mesh, rgb=rgb, depth=depth, K=K, ob_in_cams=poses.data.cpu().numpy(), normal_map=None, mesh_tensors=self.mesh_tensors, glctx=self.glctx, mesh_diameter=self.diameter, get_vis=self.debug>=2)
+    logging.info("score: ", str(scores))
+    if self.debug>=2:
+      extra['vis'] = vis
+    ids = torch.as_tensor(scores).argsort(descending=True)
+    logging.info(f'sort ids:{ids}')
+    scores = scores[ids]
+    poses = poses[ids]
+
+    logging.info(f'sorted scores:{scores}')
+
+    best_pose = poses[0]@self.get_tf_to_centered_mesh()
+    self.pose_last = poses[0]
+    self.best_id = ids[0]
+
+    self.poses = poses
+    self.scores = scores
+
+    return best_pose.detach().reshape(4,4)
+
+def sample_added_noise(pose, 
+                       current_pos_noise=0.01, 
+                       current_rot_noise=4e-2,
+                       sample_n = 20):
+  if sample_n != 1:
+    #convert
+    org_pose = torch.tensor(pose)
+    org_pos, org_ori = matrix_to_pos_quat(org_pose)
+    org_ori = matrix_to_quaternion(org_ori.unsqueeze(0)).squeeze()
+    pos = copy.deepcopy(org_pos).repeat(sample_n, 1)
+    ori = copy.deepcopy(org_ori).repeat(sample_n, 1)
+    noise = torch.randn(size=(sample_n, 7)) * 2 -1
+    # # ====================== Add noise ========================
+    position_noise = noise[:,:3] * current_pos_noise
+    pos += position_noise          
+
+    # # add orientation loss
+    rotation_noise = noise[:,3:] * current_rot_noise
+    ori += rotation_noise
+    ori = normalize_quaternion_torch(ori)
+    # =========================================================
+    # print(torch.rad2deg(quat_diff_rad(cur_sampled_pose[:,3:], current_obj_pose[:,3:])).mean())
+    # print(torch.abs(cur_sampled_pose[:,:3]-current_obj_pose[:,:3]).mean(-1).mean())
+    ori = quaternion_to_matrix(ori)
+    pose = batch_pos_rot_to_matrix(pos, ori)
+    pose = torch.cat((pose, org_pose.unsqueeze(0)), dim=0)
+  return torch.tensor(pose).reshape(-1, 4,4)
