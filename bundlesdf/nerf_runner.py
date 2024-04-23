@@ -20,6 +20,7 @@ import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from tqdm.auto import tqdm
 import pickle
 import matplotlib.pyplot as plt
 code_dir = os.path.dirname(os.path.realpath(__file__))
@@ -1099,7 +1100,7 @@ class NerfRunner:
     logging.info('Running Marching Cubes')
     from skimage import measure
     try:
-      vertices, triangles, normals, values = measure.marching_cubes(sigma, isolevel)
+      vertices, triangles, normals, values = measure.marching_cubes_lewiner(sigma, isolevel)
     except Exception as e:
       logging.info(f"ERROR Marching Cubes {e}")
       return None
@@ -1149,7 +1150,7 @@ class NerfRunner:
       face_vertices[:,i] = vertices_cuda[faces_cuda[:,i]]
 
     all_tri_list= {key: [] for key in range(mesh.triangles.shape[0])}
-    for i in range(len(rgbs_raw)):
+    for i in tqdm(range(len(rgbs_raw)), desc='texture'):
       cvcam_in_ob = tf[i]@np.linalg.inv(glcam_in_cvcam)
       _, render_depth = renderer.render(mesh=mesh, ob_in_cvcam=np.linalg.inv(cvcam_in_ob))
       xyz_map = depth2xyzmap(render_depth, self.K)

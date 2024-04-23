@@ -4,7 +4,7 @@ netdepth: 8
 netwidth: 256
 netdepth_fine: 8
 netwidth_fine: 256
-N_rand: 2048          # Batch number of rays
+N_rand: 8192          # Batch number of rays
 first_frame_ray_in_batch: 0
 lrate: 0.01
 lrate_pose: 0.01
