@@ -8,6 +8,7 @@
 
 
 from Utils import *
+from Utils import erode_depth
 from datareader import *
 import itertools
 from learning.training.predict_score import *
@@ -15,6 +16,7 @@ from learning.training.predict_pose_refine import *
 import yaml
 
 from pkm.util.torch_util import dcn
+from pathlib import Path
 
 
 class FoundationPose:
@@ -24,7 +26,8 @@ class FoundationPose:
     self.debug = debug
     self.debug_dir = debug_dir
     if debug_dir is not None:
-        os.makedirs(debug_dir, exist_ok=True)
+        #os.makedirs(debug_dir, exist_ok=True)
+        Path(debug_dir).mkdir(parents=True, exist_ok=True)
 
     if (model_pts is not None) and (model_normals is not None):
       print('successfully calling reset_object()!')
@@ -56,7 +59,7 @@ class FoundationPose:
 
   def reset_object(self, model_pts, model_normals, symmetry_tfs=None, mesh=None,
                    down = False,
-                   diameter:float = 0.1):
+                   diameter:float = None):
     max_xyz = model_pts.max(axis=-2)
     min_xyz = model_pts.min(axis=-2)
     self.model_center = (min_xyz+max_xyz)/2
@@ -67,7 +70,7 @@ class FoundationPose:
       mesh.vertices = mesh.vertices - self.model_center.reshape(1,3)
 
     #model_pts = mesh.vertices
-    if diameter is not None:
+    if diameter is None:
         diameter = compute_mesh_diameter(model_pts=mesh.vertices, n_sample=10000)
     self.diameter = diameter
     self.vox_size = max(self.diameter/20.0, 0.003)
@@ -279,7 +282,7 @@ class FoundationPose:
     self.scores = scores
 
     print('return...')
-    return best_pose.data.cpu().numpy()
+    return best_pose#.data.cpu().numpy()
 
 
   def compute_add_err_to_gt_pose(self, poses):
@@ -304,10 +307,12 @@ class FoundationPose:
     depth = bilateral_filter_depth(depth, radius=2, device='cuda')
     logging.info("depth processing done")
 
-    xyz_map = depth2xyzmap_batch(depth[None], torch.as_tensor(K, dtype=torch.float, device='cuda')[None], zfar=np.inf)[0]
+    xyz_map = depth2xyzmap_batch(depth[None],
+                                 torch.as_tensor(K, dtype=torch.float, device='cuda')[None],
+                                 zfar=float('inf'))[0]
 
     pose, vis = self.refiner.predict(mesh=self.mesh, mesh_tensors=self.mesh_tensors, rgb=rgb, depth=depth,
-                                     K=K, ob_in_cams=pose_last.reshape(1,4,4).data.cpu().numpy(),
+                                     K=K, ob_in_cams=pose_last.reshape(1,4,4),#.data.cpu().numpy(),
                                      normal_map=None, xyz_map=xyz_map, mesh_diameter=self.diameter,
                                      glctx=self.glctx, iteration=iteration, get_vis=self.debug>=2)
     logging.info("pose done")
@@ -318,4 +323,4 @@ class FoundationPose:
     if extra is not None:
         extra['pose'] = pose
         extra['pose_center'] = dpose
-    return (pose@dpose).data.cpu().numpy().reshape(4,4)
+    return (pose@dpose).reshape(4,4)#.data.cpu().numpy().reshape(4,4)

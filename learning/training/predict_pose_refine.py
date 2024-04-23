@@ -23,7 +23,8 @@ from Utils import *
 from datareader import *
 from pkm.util.torch_util import dcn
 from pkm.util.img_util import _hwc
-
+from pkm.util.path import ensure_directory
+import cv2
 def digitize_image(x: np.ndarray, num_bins: int = 255,
                    aux: Optional[Dict[str, np.ndarray]] = None):
     """ slow, to only use for visualization . """
@@ -258,11 +259,13 @@ class PoseRefinePredictor:
         B = torch.cat([pose_data.rgbBs[b:b+bs].cuda(),
                        pose_data.xyz_mapBs[b:b+bs].cuda()], dim=1).float()
         if False:
+            # Path('/tmp/docker/orig')
+            ensure_directory('/tmp/docker/orig')
             print(F'{b} / {pose_data.rgbAs.shape[0]}')
             print('A', A.shape)
             print('B', B.shape)
             for img in _hwc(A[:, :3]):
-                cv2.imwrite('/tmp/docker/A_rgb.png',
+                cv2.imwrite('/tmp/docker/orig/A_rgb.png',
                             dcn(img * 255).astype(np.uint8))
                 break
 
@@ -270,12 +273,12 @@ class PoseRefinePredictor:
                 with open('/tmp/docker/orig/A_xyz.pkl', 'wb') as fp:
                     pickle.dump(dcn(img), fp)
                 img = digitize_image(dcn(img)).reshape(img.shape)
-                cv2.imwrite('/tmp/docker/A_xyz.png',
+                cv2.imwrite('/tmp/docker/orig/A_xyz.png',
                             dcn(img).astype(np.uint8))
                 break
 
             for img in _hwc(B[:, :3]):
-                cv2.imwrite('/tmp/docker/B_rgb.png',
+                cv2.imwrite('/tmp/docker/orig/B_rgb.png',
                             dcn(img * 255).astype(np.uint8))
                 break
 
@@ -283,7 +286,7 @@ class PoseRefinePredictor:
                 with open('/tmp/docker/orig/B_xyz.pkl', 'wb') as fp:
                     pickle.dump(dcn(img), fp)
                 img = digitize_image(dcn(img)).reshape(img.shape)
-                cv2.imwrite('/tmp/docker/B_xyz.png',
+                cv2.imwrite('/tmp/docker/orig/B_xyz.png',
                             dcn(img).astype(np.uint8))
                 break
         # print(A.shape, B.shape,

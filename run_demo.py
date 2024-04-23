@@ -12,6 +12,7 @@ from datareader import *
 import argparse
 from tqdm.auto import tqdm
 
+from pkm.util.torch_util import dcn
 
 if __name__=='__main__':
   parser = argparse.ArgumentParser()
@@ -65,6 +66,7 @@ if __name__=='__main__':
       print('</register>')
 
       if debug>=3:
+        pose=pose.detach().cpu().numpy()
         m = mesh.copy()
         m.apply_transform(pose)
         m.export(f'{debug_dir}/model_tf.obj')
@@ -79,6 +81,7 @@ if __name__=='__main__':
 
     print('<save>')
     os.makedirs(f'{reader.video_dir}/ob_in_cam', exist_ok=True)
+    pose = dcn(pose)
     np.savetxt(f'{reader.video_dir}/ob_in_cam/{reader.id_strs[i]}.txt', pose.reshape(4,4))
     print('</save>')
 

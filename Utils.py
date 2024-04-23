@@ -96,7 +96,7 @@ def set_logging_format(level=logging.INFO):
   FORMAT = '[%(funcName)s()] %(message)s'
   logging.basicConfig(level=level, format=FORMAT)
 
-set_logging_format()
+# set_logging_format()
 
 
 
@@ -755,7 +755,10 @@ def draw_posed_3d_box(K, img, ob_in_cam, bbox, line_color=(0,255,0), linewidth=2
   return img
 
 
-def projection_matrix_from_intrinsics(K, height, width, znear, zfar, window_coords='y_down'):
+def projection_matrix_from_intrinsics(K,
+                                      height, width,
+                                      znear, zfar,
+                                      window_coords='y_down'):
   """Conversion of Hartley-Zisserman intrinsic matrix to OpenGL proj. matrix.
 
   Ref:
@@ -772,6 +775,15 @@ def projection_matrix_from_intrinsics(K, height, width, znear, zfar, window_coor
   :param window_coords: 'y_up' or 'y_down'.
   :return: 4x4 ndarray with the OpenGL projection matrix.
   """
+  is_th = isinstance(K, torch.Tensor)
+  if is_th:
+    proj = torch.zeros( (*K.shape[:-2], 4, 4),
+                       dtype = K.dtype,
+                       device = K.device)
+  else:
+    proj = np.zeros( (*K.shape[:-2], 4, 4),
+                    dtype = K.dtype)
+    
   x0 = 0
   y0 = 0
   w = width
@@ -779,29 +791,46 @@ def projection_matrix_from_intrinsics(K, height, width, znear, zfar, window_coor
   nc = znear
   fc = zfar
 
-  depth = float(fc - nc)
+  depth = (fc - nc)
   q = -(fc + nc) / depth
   qn = -2 * (fc * nc) / depth
 
   # Draw our images upside down, so that all the pixel-based coordinate
   # systems are the same.
   if window_coords == 'y_up':
-    proj = np.array([
-      [2 * K[0, 0] / w, -2 * K[0, 1] / w, (-2 * K[0, 2] + w + 2 * x0) / w, 0],
-      [0, -2 * K[1, 1] / h, (-2 * K[1, 2] + h + 2 * y0) / h, 0],
-      [0, 0, q, qn],  # Sets near and far planes (glPerspective).
-      [0, 0, -1, 0]
-      ])
+    proj[..., 0, 0] = 2 * K[..., 0, 0] / w 
+    proj[..., 0, 1] = -2 * K[..., 0, 1] / w 
+    proj[..., 0, 2] = (-2 * K[..., 0, 2] + w + 2 * x0)/w
+    proj[..., 1, 1] = -2 * K[..., 1, 1] / h
+    proj[..., 1, 2] = (-2 * K[..., 1, 2] + h + 2 * y0) / h
+    proj[..., 2,2]=q
+    proj[...,2,3]=qn
+    proj[...,3,2] = -1
+    
+    # proj = np.array([
+    #   [2 * K[0, 0] / w, -2 * K[0, 1] / w, (-2 * K[0, 2] + w + 2 * x0) / w, 0],
+    #   [0, -2 * K[1, 1] / h, (-2 * K[1, 2] + h + 2 * y0) / h, 0],
+    #   [0, 0, q, qn],  # Sets near and far planes (glPerspective).
+    #   [0, 0, -1, 0]
+    #   ])
 
   # Draw the images upright and modify the projection matrix so that OpenGL
   # will generate window coords that compensate for the flipped image coords.
   elif window_coords == 'y_down':
-    proj = np.array([
-      [2 * K[0, 0] / w, -2 * K[0, 1] / w, (-2 * K[0, 2] + w + 2 * x0) / w, 0],
-      [0, 2 * K[1, 1] / h, (2 * K[1, 2] - h + 2 * y0) / h, 0],
-      [0, 0, q, qn],  # Sets near and far planes (glPerspective).
-      [0, 0, -1, 0]
-      ])
+    # proj = np.array([
+    #   [2 * K[0, 0] / w, -2 * K[0, 1] / w, (-2 * K[0, 2] + w + 2 * x0) / w, 0],
+    #   [0, 2 * K[1, 1] / h, (2 * K[1, 2] - h + 2 * y0) / h, 0],
+    #   [0, 0, q, qn],  # Sets near and far planes (glPerspective).
+    #   [0, 0, -1, 0]
+    #   ])
+    proj[..., 0, 0] = 2 * K[..., 0, 0] / w 
+    proj[..., 0, 1] = -2 * K[..., 0, 1] / w 
+    proj[..., 0, 2] = (-2 * K[..., 0, 2] + w + 2 * x0)/w
+    proj[..., 1, 1] = 2 * K[..., 1, 1] / h
+    proj[..., 1, 2] = (2 * K[..., 1, 2] - h + 2 * y0) / h
+    proj[..., 2,2]=q
+    proj[...,2,3]=qn
+    proj[...,3,2] = -1
   else:
     raise NotImplementedError
 
