@@ -327,8 +327,8 @@ class FoundationPose:
 
 
 
-  def track_one_among_noises(self, rgb, depth, K, iteration, pose_last, sample_num, extra={}):
-    sampled_poses = sample_added_noise(pose_last, sample_n=sample_num)
+  def track_one_among_noises(self, rgb, depth, K, iteration, pose_last, sample_num, current_pos_noise=0.02, current_rot_noise=0.15, extra={}):
+    sampled_poses = sample_added_noise(pose_last, sample_n=sample_num, current_pos_noise=current_pos_noise, current_rot_noise=current_rot_noise)
     logging.info("Welcome")
 
     depth = torch.as_tensor(depth, device='cuda', dtype=torch.float)
@@ -361,29 +361,28 @@ class FoundationPose:
     return best_pose.detach().reshape(4,4)
 
 def sample_added_noise(pose, 
-                       current_pos_noise=0.01, 
-                       current_rot_noise=4e-2,
+                       current_pos_noise=0.02, 
+                       current_rot_noise=0.15,
                        sample_n = 20):
   if sample_n != 1:
     #convert
     org_pose = torch.tensor(pose)
-    org_pos, org_ori = matrix_to_pos_quat(org_pose)
+    org_pos, org_ori = matrix_to_pos_rotation_matrix(org_pose)
     org_ori = matrix_to_quaternion(org_ori.unsqueeze(0)).squeeze()
     pos = copy.deepcopy(org_pos).repeat(sample_n, 1)
     ori = copy.deepcopy(org_ori).repeat(sample_n, 1)
-    noise = torch.randn(size=(sample_n, 7)) * 2 -1
+    pos_noise = torch.rand(size=(sample_n, 3)) * 2 -1 # sample from [-1, 1]
+    rot_noise = torch.rand(size=(sample_n, 4)) * 2 -1 # sample from [-1, 1]
     # # ====================== Add noise ========================
-    position_noise = noise[:,:3] * current_pos_noise
+    position_noise = pos_noise * current_pos_noise
     pos += position_noise          
 
     # # add orientation loss
-    rotation_noise = noise[:,3:] * current_rot_noise
+    rotation_noise = rot_noise * current_rot_noise
     ori += rotation_noise
     ori = normalize_quaternion_torch(ori)
     # =========================================================
-    # print(torch.rad2deg(quat_diff_rad(cur_sampled_pose[:,3:], current_obj_pose[:,3:])).mean())
-    # print(torch.abs(cur_sampled_pose[:,:3]-current_obj_pose[:,:3]).mean(-1).mean())
     ori = quaternion_to_matrix(ori)
-    pose = batch_pos_rot_to_matrix(pos, ori)
+    pose = batch_pos_rot_matrix_to_matrix(pos, ori)
     pose = torch.cat((pose, org_pose.unsqueeze(0)), dim=0)
   return torch.tensor(pose).reshape(-1, 4,4)

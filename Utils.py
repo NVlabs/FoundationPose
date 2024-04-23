@@ -193,12 +193,25 @@ def matrix_to_quaternion(matrix: torch.Tensor) -> torch.Tensor:
         F.one_hot(q_abs.argmax(dim=-1), num_classes=4) > 0.5, :  # pyre-ignore[16]
     ].reshape(*batch_dim, 4)
 
-def matrix_to_pos_quat(matrix):
+def matrix_to_pos_rotation_matrix(matrix):
+    """
+      matrix: (4,4) shape
+      Returns:
+        pos: (3,) shape 
+        rot: (3,3) matrix
+    """
     pos = matrix[:3, 3]
     rot = matrix[:3, :3]
     return pos, rot
 
-def batch_pos_rot_to_matrix(pos, rot):
+def batch_pos_rot_matrix_to_matrix(pos, rot):
+    """
+      Args:
+        pos: (3,) shape 
+        rot: (3,3) shape matrix
+      Returns:
+        matrix: (4,4)  shape matrix
+    """
     # Check if the input matrices have the correct shapes
     if pos.dim() != 2 or pos.size(1) != 3 or rot.dim() != 3 or rot.size(1) != 3 or rot.size(2) != 3:
         raise ValueError("pos should be a 2D tensor with shape (batch_size, 3) and rot should be a 3D tensor with shape (batch_size, 3, 3).")
