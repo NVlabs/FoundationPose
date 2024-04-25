@@ -62,8 +62,8 @@ if __name__=='__main__':
     else:
       pose = est.track_one(rgb=color, depth=depth, K=reader.K, iteration=args.track_refine_iter)
 
-    os.makedirs(f'{reader.video_dir}/ob_in_cam', exist_ok=True)
-    np.savetxt(f'{reader.video_dir}/ob_in_cam/{reader.id_strs[i]}.txt', pose.reshape(4,4))
+    os.makedirs(f'{debug_dir}/ob_in_cam', exist_ok=True)
+    np.savetxt(f'{debug_dir}/ob_in_cam/{reader.id_strs[i]}.txt', pose.reshape(4,4))
 
     if debug>=1:
       center_pose = pose@np.linalg.inv(to_origin)
@@ -74,6 +74,6 @@ if __name__=='__main__':
 
 
     if debug>=2:
-      os.makedirs(f'{reader.video_dir}/track_vis', exist_ok=True)
-      imageio.imwrite(f'{reader.video_dir}/track_vis/{reader.id_strs[i]}.png', vis)
+      os.makedirs(f'{debug_dir}/track_vis', exist_ok=True)
+      imageio.imwrite(f'{debug_dir}/track_vis/{reader.id_strs[i]}.png', vis)
 
