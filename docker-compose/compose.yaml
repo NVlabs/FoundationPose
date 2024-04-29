@@ -1,0 +1,34 @@
+name: foundationpose
+services:
+  foundationpose:
+    build:
+      context: ../
+      dockerfile: dockerfile
+    pull_policy: build
+    image: foundationpose:latest      
+    container_name: foundationpose
+    command: bash
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /tmp:/tmp
+      - /mnt:/mnt
+      - /home:/home
+      - ../:/foundation-pose/
+    environment:
+      - DISPLAY=${DISPLAY}
+      - NVIDIA_DISABLE_REQUIRE=1
+    network_mode: host
+    ipc: host
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    tty: true
+    stdin_open: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]    
