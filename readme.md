@@ -86,17 +86,6 @@ For more recent GPU such as 4090, refer to [this](https://github.com/NVlabs/Foun
 
 # Env setup option 2: conda (experimental)
 
-- Install Eigen3 3.4.0
-
-```bash
-cd $HOME && wget -q https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz && \
-tar -xzf eigen-3.4.0.tar.gz && \
-cd eigen-3.4.0 && mkdir build && cd build
-cmake .. -Wno-dev -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=-std=c++14 ..
-sudo make install
-cd $HOME && rm -rf eigen-3.4.0 eigen-3.4.0.tar.gz
-```
-
 - Setup conda environment
 
 ```bash
@@ -105,6 +94,10 @@ create -n foundationpose python=3.9
 
 # activate conda environment
 conda activate foundationpose
+
+# Install Eigen3 3.4.0 under conda environment
+conda install conda-forge::eigen=3.4.0
+export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH:/eigen/path/under/conda"
 
 # install dependencies
 python -m pip install -r requirements.txt
