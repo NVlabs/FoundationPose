@@ -90,7 +90,7 @@ For more recent GPU such as 4090, refer to [this](https://github.com/NVlabs/Foun
 
 ```bash
 # create conda environment
-create -n foundationpose python=3.9
+conda create -n foundationpose python=3.9
 
 # activate conda environment
 conda activate foundationpose
