@@ -83,6 +83,11 @@ Later you can execute into the container without re-build.
 docker exec -it foundationpose bash
 ```
 For more recent GPU such as 4090, refer to [this](https://github.com/NVlabs/FoundationPose/issues/27).
+In short, do the following:
+```
+docker pull shingarey/foundationpose_custom_cuda121:latest
+```
+Then modify the bash script to use this image instead of `foundationpose:latest`.
 
 # Env setup option 2: conda (experimental)
 
