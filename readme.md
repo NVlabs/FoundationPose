@@ -73,7 +73,7 @@ year          = {2023},
   ```
 
 
-If it's the first time you launch the container, you need to build extensions.
+If it's the first time you launch the container, you need to build extensions. Run this command *inside* the Docker container.
 ```
 bash build_all.sh
 ```
