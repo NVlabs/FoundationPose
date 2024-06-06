@@ -1,11 +1,11 @@
 name: foundationpose
 services:
   foundationpose:
+    image: foundationpose:latest   
     build:
       context: ../
-      dockerfile: dockerfile
+      dockerfile: ./docker-compose/dockerfile
     pull_policy: build
-    image: foundationpose:latest      
     container_name: foundationpose
     command: bash
     volumes:
@@ -13,7 +13,7 @@ services:
       - /tmp:/tmp
       - /mnt:/mnt
       - /home:/home
-      - ../:/foundation-pose/
+      - ../:/foundationpose/
     environment:
       - DISPLAY=${DISPLAY}
       - NVIDIA_DISABLE_REQUIRE=1
@@ -31,4 +31,4 @@ services:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [gpu]    
+              capabilities: [gpu]

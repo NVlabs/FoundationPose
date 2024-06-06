@@ -1,8 +1,9 @@
 # Alternative (new?) Docker Support
 
-This directory provides an experimental alternative to the current recommended approach.  It uses Docker Compose for development.  Instead of using `run_container.sh`, to start the container:
+This directory provides an experimental alternative to the current recommended approach.  It uses Docker Compose for development.  Instead of using `run_container.sh` as before, to start the container:
 
 ```
+cd docker-compose
 docker compose up
 ```
 
