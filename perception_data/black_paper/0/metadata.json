@@ -1,0 +1,51 @@
+[
+    {
+        "liquid": "no_liquid",
+        "lighting": "random_lighting",
+        "view_pose": "view_pose2.tf",
+        "data_id": 1698292137,
+        "table_background": "black_paper"
+    },
+    {
+        "liquid": "no_liquid",
+        "lighting": "partial_lighting",
+        "view_pose": "view_pose4.tf",
+        "data_id": 1698292165,
+        "table_background": "black_paper"
+    },
+    {
+        "liquid": "no_liquid",
+        "lighting": "partial_lighting",
+        "view_pose": "view_pose3.tf",
+        "data_id": 1698292182,
+        "table_background": "black_paper"
+    },
+    {
+        "liquid": "no_liquid",
+        "lighting": "ceiling_lighting",
+        "view_pose": "view_pose0.tf",
+        "data_id": 1698292233,
+        "table_background": "black_paper"
+    },
+    {
+        "liquid": "liquid",
+        "lighting": "partial_lighting",
+        "view_pose": "view_pose2.tf",
+        "data_id": 1698292376,
+        "table_background": "black_paper"
+    },
+    {
+        "liquid": "liquid",
+        "lighting": "partial_lighting",
+        "view_pose": "view_pose0.tf",
+        "data_id": 1698292390,
+        "table_background": "black_paper"
+    },
+    {
+        "liquid": "liquid",
+        "lighting": "partial_lighting",
+        "view_pose": "view_pose4.tf",
+        "data_id": 1698292402,
+        "table_background": "black_paper"
+    }
+]

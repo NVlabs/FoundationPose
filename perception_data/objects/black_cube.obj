@@ -1,0 +1,83 @@
+# Aspose.3D Wavefront OBJ Exporter
+# Copyright 2004-2024 Aspose Pty Ltd.
+# File created: 06/11/2024 20:20:43
+
+mtllib material.lib
+g Cube
+
+#
+# object Cube
+#
+
+v -0.02 -0.02 -0.02
+v 0.02 -0.02 -0.02
+v -0.02 -0.02 0.02
+v 0.02 -0.02 0.02
+v -0.02 0.02 -0.02
+v 0.02 0.02 -0.02
+v 0.02 0.02 0.02
+v -0.02 0.02 0.02
+# 8 vertices
+
+vn 0 -1 0
+vn 0 -1 0
+vn 0 -1 0
+vn 0 -1 0
+vn 0 0 -1
+vn 0 0 -1
+vn 0 0 -1
+vn 0 0 -1
+vn 1 0 0
+vn 1 0 0
+vn 1 0 0
+vn 1 0 0
+vn 0 0 1
+vn 0 0 1
+vn 0 0 1
+vn 0 0 1
+vn -1 0 0
+vn -1 0 0
+vn -1 0 0
+vn -1 0 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+# 24 vertex normals
+
+vt 1 0 0
+vt 0 0 0
+vt 0 1 0
+vt 1 1 0
+vt 1 0 0
+vt 1 1 0
+vt 0 1 0
+vt 0 0 0
+vt 1 0 0
+vt 0 0 0
+vt 0 1 0
+vt 1 1 0
+vt 1 0 0
+vt 0 0 0
+vt 0 1 0
+vt 1 1 0
+vt 1 0 0
+vt 1 1 0
+vt 0 1 0
+vt 0 0 0
+vt 1 0 0
+vt 1 1 0
+vt 0 1 0
+vt 0 0 0
+# 24 texture coords
+
+usemtl Aniline_Leather_Black
+s 1
+f 1/1/1 2/2/2 4/3/3 3/4/4
+f 1/5/5 5/6/6 6/7/7 2/8/8
+f 2/9/9 6/10/10 7/11/11 4/12/12
+f 3/13/13 4/14/14 7/15/15 8/16/16
+f 1/17/17 3/18/18 8/19/19 5/20/20
+f 5/21/21 8/22/22 7/23/23 6/24/24
+#6 polygons
+

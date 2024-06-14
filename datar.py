@@ -63,22 +63,13 @@ class OrganaReader:
     self.ob_ids = [1698287651, 1698287496, 1698287390, 1698287525, 1698441059, 1698442292, 1698442659, 1698441882]
     #self.load_symmetry_tfs()
     #self.color_files = sorted(glob.glob(f"{self.base_dir}/**/**/*.jpg"))
-    self.color_files = sorted(glob.glob(f"{self.base_dir}/test3/rgb/*.jpg"))
+    self.color_files = sorted(glob.glob(f"{self.base_dir}/test2/rgb/*.png"))
     # self.K = np.array([[729.42260742,   0.        , 617.55908203],
     #                             [  0.        , 729.42260742, 359.8135376 ],
     #                         [  0.        ,   0.        ,   1.        ]])
     self.K = np.array([[3.195820007324218750e+02, 0.000000000000000000e+00, 3.202149847676955687e+02],
- [0.000000000000000000e+00, 4.171186828613281250e+02, 2.443486680871046701e+02],
- [0.000000000000000000e+00, 0.000000000000000000e+00, 1.000000000000000000e+00]])
-#     self.K = np.array([
-# [510.0, 0, 319.5],
-# [0, 525.0, 238.5],
-# [0, 0, 1]
-# ])
-#     self.K= np.array([
-# [366.1, 0, 258.1],
-# [0, 366.1, 204.2],
-# [0, 0, 1]])
+[0.000000000000000000e+00, 4.171186828613281250e+02, 2.443486680871046701e+02],
+[0.000000000000000000e+00, 0.000000000000000000e+00, 1.000000000000000000e+00]])
     self.id_strs = []
     for color_file in self.color_files:
       id_str = os.path.basename(color_file).replace('.jpg','')
@@ -93,7 +84,7 @@ class OrganaReader:
     # #
     # self.depth_paths = sorted(glob.glob(f'{base_dir}/**/**/depth_*.npy', recursive=True))
     # self.camera_pose_paths = sorted(glob.glob(f'{base_dir}/**/**/camera_pose_*.npy', recursive=True))
-    self.depth_paths = sorted(glob.glob(f'{self.base_dir}/test4/depth/*.png', recursive=True))
+    self.depth_paths = sorted(glob.glob(f'{self.base_dir}/test/depth/*.jpg', recursive=True))
 
     self.labels = glob.glob(f'{base_dir}/**/**/*.xml', recursive=True)
     #self.metadata = pd.read_csv(f'{base_dir}/metadata.csv')

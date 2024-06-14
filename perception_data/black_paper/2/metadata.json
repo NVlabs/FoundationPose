@@ -1,0 +1,58 @@
+[
+    {
+        "liquid": "no_liquid",
+        "lighting": "random_lighting",
+        "view_pose": "view_pose4.tf",
+        "data_id": 1698293615,
+        "table_background": "black_paper"
+    },
+    {
+        "liquid": "no_liquid",
+        "lighting": "random_lighting",
+        "view_pose": "view_pose3.tf",
+        "data_id": 1698293637,
+        "table_background": "black_paper"
+    },
+    {
+        "liquid": "no_liquid",
+        "lighting": "ceiling_lighting",
+        "view_pose": "view_pose2.tf",
+        "data_id": 1698293686,
+        "table_background": "black_paper"
+    },
+    {
+        "liquid": "no_liquid",
+        "lighting": "ceiling_lighting",
+        "view_pose": "view_pose0.tf",
+        "data_id": 1698293699,
+        "table_background": "black_paper"
+    },
+    {
+        "liquid": "liquid",
+        "lighting": "partial_lighting",
+        "view_pose": "view_pose0.tf",
+        "data_id": 1698293775,
+        "table_background": "black_paper"
+    },
+    {
+        "liquid": "liquid",
+        "lighting": "partial_lighting",
+        "view_pose": "view_pose5.tf",
+        "data_id": 1698293790,
+        "table_background": "black_paper"
+    },
+    {
+        "liquid": "liquid",
+        "lighting": "partial_lighting",
+        "view_pose": "view_pose2.tf",
+        "data_id": 1698293803,
+        "table_background": "black_paper"
+    },
+    {
+        "liquid": "liquid",
+        "lighting": "ceiling_lighting",
+        "view_pose": "view_pose3.tf",
+        "data_id": 1698293842,
+        "table_background": "black_paper"
+    }
+]

@@ -1,0 +1,58 @@
+[
+    {
+        "liquid": "no_liquid",
+        "lighting": "random_lighting",
+        "view_pose": "view_pose4.tf",
+        "data_id": 1698284706,
+        "table_background": "table"
+    },
+    {
+        "liquid": "no_liquid",
+        "lighting": "partial_lighting",
+        "view_pose": "view_pose4.tf",
+        "data_id": 1698284736,
+        "table_background": "table"
+    },
+    {
+        "liquid": "no_liquid",
+        "lighting": "ceiling_lighting",
+        "view_pose": "view_pose2.tf",
+        "data_id": 1698284763,
+        "table_background": "table"
+    },
+    {
+        "liquid": "liquid",
+        "lighting": "random_lighting",
+        "view_pose": "view_pose2.tf",
+        "data_id": 1698285013,
+        "table_background": "table"
+    },
+    {
+        "liquid": "liquid",
+        "lighting": "random_lighting",
+        "view_pose": "view_pose0.tf",
+        "data_id": 1698285082,
+        "table_background": "table"
+    },
+    {
+        "liquid": "liquid",
+        "lighting": "partial_lighting",
+        "view_pose": "view_pose2.tf",
+        "data_id": 1698285106,
+        "table_background": "table"
+    },
+    {
+        "liquid": "liquid",
+        "lighting": "partial_lighting",
+        "view_pose": "view_pose0.tf",
+        "data_id": 1698285121,
+        "table_background": "table"
+    },
+    {
+        "liquid": "liquid",
+        "lighting": "ceiling_lighting",
+        "view_pose": "view_pose2.tf",
+        "data_id": 1698285154,
+        "table_background": "table"
+    }
+]
