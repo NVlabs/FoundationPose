@@ -16,6 +16,7 @@ import argparse
 if __name__=='__main__':
   parser = argparse.ArgumentParser()
   code_dir = os.path.dirname(os.path.realpath(__file__))
+  # specify the path to the mesh file here (e.g. textured_simple.obj)
   parser.add_argument('--mesh_file', type=str, default=f'{code_dir}/perception_data/objects/b2.obj')
   #parser.add_argument('--mesh_file', type=str, default=f'{code_dir}/perception_data/objects/textured_simple.obj')
   parser.add_argument('--test_scene_dir', type=str, default=f'{code_dir}/perception_data')
