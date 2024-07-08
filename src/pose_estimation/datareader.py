@@ -34,9 +34,9 @@ class OrganaReader:
     self.K = np.array([[729.42260742,   0.        , 617.55908203],
                                 [  0.        , 729.42260742, 359.8135376 ],
                             [  0.        ,   0.        ,   1.        ]])
-    self.color_sub = rospy.Subscriber('/camera/color/image_raw', Image, self.color_callback)
-    self.depth_sub = rospy.Subscriber('/camera/depth/image_rect_raw', Image, self.depth_callback)
-    self.camera_info_sub = rospy.Subscriber('/camera/color/camera_info', CameraInfo, self.camera_info_callback)
+    self.color_sub = rospy.Subscriber('/zedm/zed_node/rgb/image_rect_color', Image, self.color_callback)
+    self.depth_sub = rospy.Subscriber('/zedm/zed_node/depth/depth_registered', Image, self.depth_callback)
+    self.camera_info_sub = rospy.Subscriber('/zedm/zed_node/rgb/camera_info', CameraInfo, self.camera_info_callback)
     # camera intrinsic matrix for the foundationpose demo dataset
  #     self.K = np.array([[3.195820007324218750e+02, 0.000000000000000000e+00, 3.202149847676955687e+02],
  #  [0.000000000000000000e+00, 4.171186828613281250e+02, 2.443486680871046701e+02],
@@ -51,7 +51,8 @@ class OrganaReader:
     for color_file in self.color_files:
       id_str = os.path.basename(color_file).replace('.jpg','')
       self.id_strs.append(id_str)
-    self.H,self.W = cv2.imread(self.color_files[0]).shape[:2]
+    self.H,self.W = 2560, 720
+
     if shorter_side is not None:
       self.downscale = shorter_side/min(self.H, self.W)
     self.H = int(self.H*self.downscale)
@@ -63,6 +64,16 @@ class OrganaReader:
     self.depth_paths = sorted(glob.glob(f'{self.base_dir}/depth/*.npy', recursive=True))
     self.labels = glob.glob(f'{base_dir}/**/**/*.xml', recursive=True)
     #self.metadata = pd.read_csv(f'{base_dir}/metadata.csv')
+
+    self.color_dir = f'{base_dir}/rgb'
+    self.depth_dir = f'{base_dir}/depth'
+    os.makedirs(self.color_dir, exist_ok=True)
+    os.makedirs(self.depth_dir, exist_ok=True)
+    self.image_counter = 0
+    self.color_image = None
+    self.depth_image = None
+    self.bridge = CvBridge()
+    
 
   def __len__(self):
     return len(self.color_files)
@@ -124,16 +135,16 @@ class OrganaReader:
     except:
       logging.info("GT pose not found, return None")
       return None
-  def get_color(self,i):
-     # read from the image topic
-    self.color_image = None
-    self.depth_image = None
-    self.bridge = CvBridge()
-    rospy.init_node('image_listener', anonymous=True)
-    rospy.Subscriber("/camera/color/image_raw", Image, self.color_callback)
-    rospy.Subscriber("/camera/depth/image_raw", Image, self.depth_callback)
-    rospy.spin()
-    return self.color_image
+  # def get_color(self,i):
+  #    # read from the image topic
+  #   self.color_image = None
+  #   self.depth_image = None
+  #   self.bridge = CvBridge()
+  #   rospy.init_node('image_listener', anonymous=True)
+  #   rospy.Subscriber("/camera/color/image_raw", Image, self.color_callback)
+  #   rospy.Subscriber("/camera/depth/image_raw", Image, self.depth_callback)
+  #   rospy.spin()
+  #   return self.color_image
 
 
   def get_color(self,i):

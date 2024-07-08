@@ -1,4 +1,4 @@
-#!/home/skylerhan/miniconda3/envs/foundationpose/bin/python
+#!/home/chemrobot/anaconda3/envs/foundationpose/bin/python
 import os
 import trimesh
 import numpy as np
@@ -32,7 +32,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     code_dir = os.path.dirname(os.path.realpath(__file__))
     parser.add_argument('--mesh_file', type=str, default=f'{code_dir}/perception_data/objects/beaker_250ml.obj')
-    parser.add_argument('--test_scene_dir', type=str, default=f'{code_dir}/perception_data/test3')
+    parser.add_argument('--test_scene_dir', type=str, default=f'{code_dir}/perception_data/test9')
     parser.add_argument('--est_refine_iter', type=int, default=5)
     parser.add_argument('--track_refine_iter', type=int, default=2)
     parser.add_argument('--debug', type=int, default=1)
@@ -53,15 +53,22 @@ if __name__ == '__main__':
     scorer = ScorePredictor()
     refiner = PoseRefinePredictor()
     glctx = dr.RasterizeCudaContext()
+    # if test_scene_dir exists, use it, otherwise mkdir it
 
+    if not os.path.exists(args.test_scene_dir):
+        os.makedirs(args.test_scene_dir)
+    reader = OrganaReader(base_dir=args.test_scene_dir, shorter_side=None, zfar=np.inf)
+    rospy.init_node('pose_publisher', anonymous=True)
+    
+    color_sub = rospy.Subscriber('/zedm/zed_node/rgb/image_rect_color', Image, reader.color_callback)
+    reader.generate_mask()
+    depth_sub = rospy.Subscriber('/zedm/zed_node/depth/depth_registered', Image, reader.depth_callback)
+    camera_info_sub = rospy.Subscriber('/zedm/zed_node/rgb/camera_info', CameraInfo, reader.camera_info_callback)
+    rospy.spin()
     est = FoundationPose(model_pts=mesh.vertices, model_normals=mesh.vertex_normals, mesh=mesh, scorer=scorer, refiner=refiner, debug_dir=debug_dir, debug=debug, glctx=glctx)
     logging.info("estimator initialization done")
 
-    reader = OrganaReader(base_dir=args.test_scene_dir, shorter_side=None, zfar=np.inf)
-    reader.generate_mask()
-    reader.color_sub
-    reader.depth_sub
-    reader.camera_info_sub
+    
     for i in range(len(reader.color_files)):
         logging.info(f'i: {i}')
         color = reader.get_color(i)
