@@ -50,7 +50,7 @@ class OrganaReader:
     for color_file in self.color_files:
       id_str = os.path.basename(color_file).replace('.jpg','')
       self.id_strs.append(id_str)
-    self.H,self.W = 2560, 720
+    self.H,self.W = 360,640
 
     if shorter_side is not None:
       self.downscale = shorter_side/min(self.H, self.W)
