@@ -26,7 +26,7 @@ def publish_pose_matrix(pose):
     # Publish the message
     pub.publish(pose_msg)
     # Spin
-    rospy.spin()
+    # rospy.spin()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -59,7 +59,9 @@ if __name__ == '__main__':
 
     reader = OrganaReader(base_dir=args.test_scene_dir, shorter_side=None, zfar=np.inf)
     reader.generate_mask()
-    
+    reader.color_sub
+    reader.depth_sub
+    reader.camera_info_sub
     for i in range(len(reader.color_files)):
         logging.info(f'i: {i}')
         color = reader.get_color(i)
