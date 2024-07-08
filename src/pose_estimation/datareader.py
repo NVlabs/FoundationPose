@@ -18,7 +18,6 @@ import numpy as np
 import rospy
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import CameraInfo
-from cv_bridge import CvBridge, CvBridgeError
 class OrganaReader:
   def __init__(self, base_dir, downscale=1, shorter_side=None, zfar=np.inf):
     self.base_dir = base_dir
@@ -72,7 +71,6 @@ class OrganaReader:
     self.image_counter = 0
     self.color_image = None
     self.depth_image = None
-    self.bridge = CvBridge()
     
 
   def __len__(self):
@@ -82,44 +80,46 @@ class OrganaReader:
             self.K = np.array(msg.K).reshape(3, 3)
 
 
-  def color_callback(self, msg):
-      try:
-          self.color_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-          if self.color_image is not None and self.depth_image is not None:
-              self.process_images()
-      except CvBridgeError as e:
-          rospy.logerr(e)
-
-
-  def depth_callback(self, msg):
-      try:
-          self.depth_image = self.bridge.imgmsg_to_cv2(msg, "32FC1")
-          if self.color_image is not None and self.depth_image is not None:
-              self.process_images()
-      except CvBridgeError as e:
-          rospy.logerr(e)
   def camera_info_callback(self, msg):
         if self.K is None:
             self.K = np.array(msg.K).reshape(3, 3)
-      
+
+  def color_callback(self, msg):
+      try:
+          self.color_image = self.convert_ros_image_to_cv2(msg)
+          if self.color_image is not None and self.depth_image is not None:
+              self.process_images()
+      except Exception as e:
+          rospy.logerr(e)
+
+  def depth_callback(self, msg):
+      try:
+          self.depth_image = self.convert_ros_image_to_cv2(msg, depth=True)
+          if self.color_image is not None and self.depth_image is not None:
+              self.process_images()
+      except Exception as e:
+          rospy.logerr(e)
+
+  def convert_ros_image_to_cv2(self, img_msg, depth=False):
+      dtype = np.float32 if depth else np.uint8
+      channels = 1 if depth else 4
+      img = np.frombuffer(img_msg.data, dtype=dtype).reshape(img_msg.height, img_msg.width, channels)
+      if not depth:
+          img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+      return img
+
   def process_images(self):
-        # Process images for pose estimation
-        if self.color_image is not None and self.depth_image is not None:
-            # Save color image
-            color_image_path = os.path.join(self.color_dir, f'{self.image_counter:06d}.jpg')
-            cv2.imwrite(color_image_path, self.color_image)
-            # Save depth image
-            depth_image_path = os.path.join(self.depth_dir, f'{self.image_counter:06d}.npy')
-            np.save(depth_image_path, self.depth_image)
+      if self.color_image is not None and self.depth_image is not None:
+          color_image_path = os.path.join(self.color_dir, f'{self.image_counter:06d}.jpg')
+          cv2.imwrite(color_image_path, self.color_image)
+          depth_image_path = os.path.join(self.depth_dir, f'{self.image_counter:06d}.npy')
+          np.save(depth_image_path, self.depth_image)
 
-            rospy.loginfo(f'Saved color image to {color_image_path}')
-            rospy.loginfo(f'Saved depth image to {depth_image_path}')
+          rospy.loginfo(f'Saved color image to {color_image_path}')
+          rospy.loginfo(f'Saved depth image to {depth_image_path}')
 
-            # Increment the image counter
-            self.image_counter += 1
-
-            print("Images received and processed")
-  
+          self.image_counter += 1
+          print("Images received and processed")
 
   def get_camera_pose(self,i):
     try:
