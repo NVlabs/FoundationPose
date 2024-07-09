@@ -35,6 +35,7 @@ setup(
     include_dirs=[
         "/usr/local/include/eigen3",
         "/usr/include/eigen3",
+        "/usr/local/cuda/include",
     ],
     cmdclass={
         'build_ext': BuildExtension

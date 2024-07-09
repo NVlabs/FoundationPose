@@ -31,7 +31,7 @@ def publish_pose_matrix(pose):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     code_dir = os.path.dirname(os.path.realpath(__file__))
-    parser.add_argument('--mesh_file', type=str, default=f'{code_dir}/perception_data/objects/beaker_250ml.obj')
+    parser.add_argument('--mesh_file', type=str, default=f'{code_dir}/perception_data/objects/cube.obj')
     parser.add_argument('--test_scene_dir', type=str, default=f'{code_dir}/perception_data/test9')
     parser.add_argument('--est_refine_iter', type=int, default=5)
     parser.add_argument('--track_refine_iter', type=int, default=2)
@@ -60,32 +60,46 @@ if __name__ == '__main__':
     reader = OrganaReader(base_dir=args.test_scene_dir, shorter_side=None, zfar=np.inf)
     rospy.init_node('pose_publisher', anonymous=True)
     
-    color_sub = rospy.Subscriber('/zedm/zed_node/rgb/image_rect_color', Image, reader.color_callback)
+     # Read one image and generate mask
+    color_image = rospy.wait_for_message('/zedm/zed_node/rgb/image_rect_color', Image)
+    depth_image = rospy.wait_for_message('/zedm/zed_node/depth/depth_registered', Image)
+    camera_info = rospy.wait_for_message('/zedm/zed_node/rgb/camera_info', CameraInfo)
+    
+    reader.color_callback(color_image)
+    reader.depth_callback(depth_image)
+    reader.camera_info_callback(camera_info)
     reader.generate_mask()
-    depth_sub = rospy.Subscriber('/zedm/zed_node/depth/depth_registered', Image, reader.depth_callback)
-    camera_info_sub = rospy.Subscriber('/zedm/zed_node/rgb/camera_info', CameraInfo, reader.camera_info_callback)
-    rospy.spin()
+    
+    # Start subscribing continuously
+    rospy.Subscriber('/zedm/zed_node/rgb/image_rect_color', Image, reader.color_callback) # set the frequency of the subscriber to 1 Hz
+    rospy.Subscriber('/zedm/zed_node/depth/depth_registered', Image, reader.depth_callback)
+    rospy.Subscriber('/zedm/zed_node/rgb/camera_info', CameraInfo, reader.camera_info_callback)
+    
+    # rospy.spin()
+
     est = FoundationPose(model_pts=mesh.vertices, model_normals=mesh.vertex_normals, mesh=mesh, scorer=scorer, refiner=refiner, debug_dir=debug_dir, debug=debug, glctx=glctx)
     logging.info("estimator initialization done")
 
     
-    for i in range(len(reader.color_files)):
-        logging.info(f'i: {i}')
-        color = reader.get_color(i)
-        depth = reader.get_depth(i)
+    # for i in range(len(reader.color_files)):
+    i = 0
+    while True:
+        # logging.info(f'i: {i}')
+        color = reader.get_color(-1)
+        depth = reader.get_depth(-1)
         if True:
             mask = reader.get_mask(0).astype(bool)
-            print("!!!!!")
             print(np.unique(depth))
             
-            depth[(mask == 1) & (depth > 0.8)] = 0.78
+            # depth[(mask == 1) & (depth > 0.8)] = 0.78
             pose = est.register(K=reader.K, rgb=color, depth=depth, ob_mask=mask, iteration=args.est_refine_iter)
-            extrinsic_mat = np.load(f'{args.test_scene_dir}/gt_poses/ext.npy')
+            # extrinsic_mat = np.load(f'{args.test_scene_dir}/gt_poses/ext.npy')
             
-            world_pose = extrinsic_mat.dot(pose)
-            print(world_pose)
-            world_pose = world_pose.flatten()
-            publish_pose_matrix(world_pose)
+            # world_pose = extrinsic_mat.dot(pose)
+            print("Pose estimated")
+            print(pose)
+            camera_pose = pose.flatten()
+            publish_pose_matrix(camera_pose)
             print("Pose published")
             
             if debug >= 3:
@@ -100,6 +114,7 @@ if __name__ == '__main__':
             pose = est.track_one(rgb=color, depth=depth, K=reader.K, iteration=args.track_refine_iter)
         
         os.makedirs(f'{debug_dir}/ob_in_cam_organa', exist_ok=True)
+        i = i +1
         np.savetxt(f'{debug_dir}/ob_in_cam_organa/{reader.id_strs[i]}.txt', pose.reshape(4, 4))
 
         if debug >= 1:
@@ -111,5 +126,5 @@ if __name__ == '__main__':
 
         if debug >= 2:
             os.makedirs(f'{debug_dir}/track_vis', exist_ok=True)
-            imageio.imwrite(f'{debug_dir}/track_vis/{reader.id_strs[i]}.png', vis)
+            imageio.imwrite(f'{debug_dir}/track_vis/{reader.id_strs[-1]}.jpg', vis)
             

@@ -42,6 +42,8 @@ class MaskGenerator:
         white_image = np.ones_like(self.image) * 255
         result = np.where(mask == 255, white_image, 0)
         mask_path = self.color_files[0].replace('rgb','masks')
+        if not os.path.exists(self.mask_dir):
+            os.makedirs(self.mask_dir)
         cv2.imwrite(mask_path, result)
         print(f"Mask saved to {mask_path}")
         cv2.imshow('Result', result)

@@ -33,9 +33,9 @@ class OrganaReader:
     self.K = np.array([[729.42260742,   0.        , 617.55908203],
                                 [  0.        , 729.42260742, 359.8135376 ],
                             [  0.        ,   0.        ,   1.        ]])
-    self.color_sub = rospy.Subscriber('/zedm/zed_node/rgb/image_rect_color', Image, self.color_callback)
-    self.depth_sub = rospy.Subscriber('/zedm/zed_node/depth/depth_registered', Image, self.depth_callback)
-    self.camera_info_sub = rospy.Subscriber('/zedm/zed_node/rgb/camera_info', CameraInfo, self.camera_info_callback)
+    # self.color_sub = rospy.Subscriber('/zedm/zed_node/rgb/image_rect_color', Image, self.color_callback)
+    # self.depth_sub = rospy.Subscriber('/zedm/zed_node/depth/depth_registered', Image, self.depth_callback)
+    # self.camera_info_sub = rospy.Subscriber('/zedm/zed_node/rgb/camera_info', CameraInfo, self.camera_info_callback)
     # camera intrinsic matrix for the foundationpose demo dataset
  #     self.K = np.array([[3.195820007324218750e+02, 0.000000000000000000e+00, 3.202149847676955687e+02],
  #  [0.000000000000000000e+00, 4.171186828613281250e+02, 2.443486680871046701e+02],
@@ -95,8 +95,8 @@ class OrganaReader:
   def depth_callback(self, msg):
       try:
           self.depth_image = self.convert_ros_image_to_cv2(msg, depth=True)
-          if self.color_image is not None and self.depth_image is not None:
-              self.process_images()
+          # if self.color_image is not None and self.depth_image is not None:
+          #     self.process_images()
       except Exception as e:
           rospy.logerr(e)
 
@@ -148,7 +148,9 @@ class OrganaReader:
 
 
   def get_color(self,i):
-    color = imageio.imread(self.color_files[i])[...,:3]
+    #color = imageio.imread(self.color_files[i])[...,:3]
+    # why does -1 index out of range error occur?
+    color = cv2.imread(self.color_files[i])
     color = cv2.resize(color, (self.W,self.H), interpolation=cv2.INTER_NEAREST)
     return color
   def generate_mask(self):
