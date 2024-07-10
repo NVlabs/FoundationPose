@@ -6,23 +6,34 @@ import logging
 import argparse
 import rospy
 from geometry_msgs.msg import Pose
+from std_msgs.msg import Float64MultiArray, MultiArrayDimension
 from estimater import *
 from datareader import *
 
 
 # Pose Publisher Function
 def publish_pose_matrix(pose):
-    pub = rospy.Publisher('pose_matrix', Pose, queue_size=10)
-    rospy.init_node('pose_publisher', anonymous=True)
-    # Convert the 4x4 matrix to a Pose message
-    pose_msg = Pose()
-    pose_msg.position.x = pose[3]
-    pose_msg.position.y = pose[7]
-    pose_msg.position.z = pose[11]
-    pose_msg.orientation.x = pose[0]
-    pose_msg.orientation.y = pose[1]
-    pose_msg.orientation.z = pose[2]
-    pose_msg.orientation.w = pose[15]
+    # publish the pose matrix as a flattened tensor
+    pub = rospy.Publisher('pose', Float64MultiArray, queue_size=10)
+    pose_flat = pose.flatten().tolist()
+    
+    # Create the MultiArray message
+    pose_msg = Float64MultiArray()
+    pose_msg.data = pose_flat
+    
+    # Define the layout
+    dim1 = MultiArrayDimension()
+    dim1.label = "rows"
+    dim1.size = 4
+    dim1.stride = 16  # 4x4 matrix
+    dim2 = MultiArrayDimension()
+    dim2.label = "columns"
+    dim2.size = 4
+    dim2.stride = 4
+
+    pose_msg.layout.dim = [dim1, dim2]
+    pose_msg.layout.data_offset = 0
+    
     # Publish the message
     pub.publish(pose_msg)
     # Spin
@@ -31,7 +42,7 @@ def publish_pose_matrix(pose):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     code_dir = os.path.dirname(os.path.realpath(__file__))
-    parser.add_argument('--mesh_file', type=str, default=f'{code_dir}/perception_data/objects/cube.obj')
+    parser.add_argument('--mesh_file', type=str, default=f'{code_dir}/perception_data/objects/beaker_250ml.obj')
     parser.add_argument('--test_scene_dir', type=str, default=f'{code_dir}/perception_data/test9')
     parser.add_argument('--est_refine_iter', type=int, default=5)
     parser.add_argument('--track_refine_iter', type=int, default=2)
@@ -83,10 +94,11 @@ if __name__ == '__main__':
     
     # for i in range(len(reader.color_files)):
     i = 0
+    time.sleep(2) # Wait for the first image to be read
     while True:
-        # logging.info(f'i: {i}')
-        color = reader.get_color(-1)
-        depth = reader.get_depth(-1)
+        logging.info(f'i: {i}')
+        color = reader.get_color()
+        depth = reader.get_depth()
         if True:
             mask = reader.get_mask(0).astype(bool)
             print(np.unique(depth))
@@ -98,24 +110,23 @@ if __name__ == '__main__':
             # world_pose = extrinsic_mat.dot(pose)
             print("Pose estimated")
             print(pose)
-            camera_pose = pose.flatten()
-            publish_pose_matrix(camera_pose)
+            publish_pose_matrix(pose)
             print("Pose published")
             
-            if debug >= 3:
-                m = mesh.copy()
-                m.apply_transform(pose)
-                m.export(f'{debug_dir}/model_tf.obj')
-                xyz_map = depth2xyzmap(depth, reader.K)
-                valid = depth >= 0.1
-                pcd = toOpen3dCloud(xyz_map[valid], color[valid])
-                o3d.io.write_point_cloud(f'{debug_dir}/scene_complete.ply', pcd)
+            # if debug >= 3:
+            #     m = mesh.copy()
+            #     m.apply_transform(pose)
+            #     m.export(f'{debug_dir}/model_tf.obj')
+            #     xyz_map = depth2xyzmap(depth, reader.K)
+            #     valid = depth >= 0.1
+            #     pcd = toOpen3dCloud(xyz_map[valid], color[valid])
+            #     o3d.io.write_point_cloud(f'{debug_dir}/scene_complete.ply', pcd)
         else:
             pose = est.track_one(rgb=color, depth=depth, K=reader.K, iteration=args.track_refine_iter)
         
         os.makedirs(f'{debug_dir}/ob_in_cam_organa', exist_ok=True)
         i = i +1
-        np.savetxt(f'{debug_dir}/ob_in_cam_organa/{reader.id_strs[i]}.txt', pose.reshape(4, 4))
+        # np.savetxt(f'{debug_dir}/ob_in_cam_organa/{reader.id_strs[i]}.txt', pose.reshape(4, 4))
 
         if debug >= 1:
             center_pose = pose @ np.linalg.inv(to_origin)

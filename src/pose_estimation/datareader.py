@@ -30,9 +30,9 @@ class OrganaReader:
        # specify the path to the rgb images here and makr sure the images are in the right format
     self.color_files = sorted(glob.glob(f"{self.base_dir}/rgb/*.jpg"))
     # camera intrinsic matrix for the organa dataset
-    self.K = np.array([[729.42260742,   0.        , 617.55908203],
-                                [  0.        , 729.42260742, 359.8135376 ],
-                            [  0.        ,   0.        ,   1.        ]])
+    # self.K = np.array([[729.42260742,   0.        , 617.55908203],
+    #                             [  0.        , 729.42260742, 359.8135376 ],
+    #                         [  0.        ,   0.        ,   1.        ]])
     # self.color_sub = rospy.Subscriber('/zedm/zed_node/rgb/image_rect_color', Image, self.color_callback)
     # self.depth_sub = rospy.Subscriber('/zedm/zed_node/depth/depth_registered', Image, self.depth_callback)
     # self.camera_info_sub = rospy.Subscriber('/zedm/zed_node/rgb/camera_info', CameraInfo, self.camera_info_callback)
@@ -56,7 +56,7 @@ class OrganaReader:
       self.downscale = shorter_side/min(self.H, self.W)
     self.H = int(self.H*self.downscale)
     self.W = int(self.W*self.downscale)
-    self.K[:2] *= self.downscale
+    # self.K[:2] *= self.downscale
     # self.gt_pose_files = sorted(glob.glob(f'{self.base_dir}/gt_poses/*.tf'))
     # self.depth_paths = sorted(glob.glob(f'{base_dir}/**/**/depth_*.npy', recursive=True))
     # self.camera_pose_paths = sorted(glob.glob(f'{base_dir}/**/**/camera_pose_*.npy', recursive=True))
@@ -71,6 +71,7 @@ class OrganaReader:
     self.image_counter = 0
     self.color_image = None
     self.depth_image = None
+    self.K = None
     
 
   def __len__(self):
@@ -87,16 +88,36 @@ class OrganaReader:
   def color_callback(self, msg):
       try:
           self.color_image = self.convert_ros_image_to_cv2(msg)
-          if self.color_image is not None and self.depth_image is not None:
+          if self.color_image is not None and self.depth_image is not None and self.valid_depth(self.depth_image):
               self.process_images()
       except Exception as e:
           rospy.logerr(e)
+      self.image_counter += 1
+
+  def valid_depth(self, depth_image):
+     # Traceback (most recent call last):
+#   File "/home/chemrobot/catkin_ws/src/pose_estimation/src/pose_estimation/pose_estimation.py", line 101, in <module>
+#     depth = reader.get_depth()
+#   File "/home/chemrobot/catkin_ws/src/pose_estimation/src/pose_estimation/datareader.py", line 192, in get_depth
+#     depth = np.load(self.latest_depth_image)
+#   File "/home/chemrobot/anaconda3/envs/foundationpose/lib/python3.9/site-packages/numpy/lib/npyio.py", line 456, in load
+#     return format.read_array(fid, allow_pickle=allow_pickle,
+#   File "/home/chemrobot/anaconda3/envs/foundationpose/lib/python3.9/site-packages/numpy/lib/format.py", line 839, in read_array
+#     array.shape = shape
+# ValueError: cannot reshape array of size 47072 into shape (360,640,1)
+# [INFO] [1720626022.239118]: Saved color image to /home/chemrobot/catkin_ws/src/pose_estimation/src/pose_estimation/perception_data/test9/rgb/001060.jpg
+# [INFO] [1720626022.239847]: Saved depth image to /home/chemrobot/catkin_ws/src/pose_estimation/src/pose_estimation/perception_data/test9/depth/001060.npy
+# Images received and processed
+    # check if the depth image is valid in size
+    if depth_image.shape[0] == self.H and depth_image.shape[1] == self.W:
+        return True
+    return False
 
   def depth_callback(self, msg):
       try:
           self.depth_image = self.convert_ros_image_to_cv2(msg, depth=True)
-          # if self.color_image is not None and self.depth_image is not None:
-          #     self.process_images()
+          if self.color_image is not None and self.depth_image is not None and self.valid_depth(self.depth_image):
+              self.process_images()
       except Exception as e:
           rospy.logerr(e)
 
@@ -114,11 +135,12 @@ class OrganaReader:
           cv2.imwrite(color_image_path, self.color_image)
           depth_image_path = os.path.join(self.depth_dir, f'{self.image_counter:06d}.npy')
           np.save(depth_image_path, self.depth_image)
+          self.latest_color_image = color_image_path
+          self.latest_depth_image = depth_image_path
+
 
           rospy.loginfo(f'Saved color image to {color_image_path}')
           rospy.loginfo(f'Saved depth image to {depth_image_path}')
-
-          self.image_counter += 1
           print("Images received and processed")
 
   def get_camera_pose(self,i):
@@ -147,15 +169,15 @@ class OrganaReader:
   #   return self.color_image
 
 
-  def get_color(self,i):
+  def get_color(self):
     #color = imageio.imread(self.color_files[i])[...,:3]
-    # why does -1 index out of range error occur?
-    color = cv2.imread(self.color_files[i])
+    color = cv2.imread(self.latest_color_image)
     color = cv2.resize(color, (self.W,self.H), interpolation=cv2.INTER_NEAREST)
     return color
   def generate_mask(self):
     mask_generator = MaskGenerator(base_dir=self.base_dir)
     mask_generator.generation()
+    print("Mask generation done")
 
 
     # Load the bounding box coordinates
@@ -181,12 +203,12 @@ class OrganaReader:
   # #  Proceed with the erode_depth function
   #   depth = erode_depth(depth, radius=2, device='cuda')
   #   return depth
-  def get_depth(self,i):
+  def get_depth(self):
     #depth = cv2.imread(self.color_files[i].replace('rgb','depth'),-1)/1e3
     # depth is in npy format
 
 
-    depth = np.load(self.depth_paths[i])
+    depth = np.load(self.latest_depth_image)
     depth = cv2.resize(depth, (self.W,self.H), interpolation=cv2.INTER_NEAREST)
     depth[(depth<0.1) | (depth>=self.zfar)] = 0
     if depth.ndim == 3:
