@@ -80,7 +80,9 @@ if __name__ == '__main__':
     reader.depth_callback(depth_image)
     reader.camera_info_callback(camera_info)
     reader.generate_mask()
-    
+    while reader.get_mask(0) is None:
+        rospy.loginfo("Waiting for mask to be generated...")
+        time.sleep(0.1)
     # Start subscribing continuously
     rospy.Subscriber('/zedm/zed_node/rgb/image_rect_color', Image, reader.color_callback) # set the frequency of the subscriber to 1 Hz
     rospy.Subscriber('/zedm/zed_node/depth/depth_registered', Image, reader.depth_callback)
@@ -94,7 +96,8 @@ if __name__ == '__main__':
     
     # for i in range(len(reader.color_files)):
     i = 0
-    time.sleep(2) # Wait for the first image to be read
+    # Wait for the first image to be read
+    
     while True:
         logging.info(f'i: {i}')
         color = reader.get_color()
@@ -106,7 +109,10 @@ if __name__ == '__main__':
             # depth[(mask == 1) & (depth > 0.8)] = 0.78
             pose = est.register(K=reader.K, rgb=color, depth=depth, ob_mask=mask, iteration=args.est_refine_iter)
             # extrinsic_mat = np.load(f'{args.test_scene_dir}/gt_poses/ext.npy')
-            
+            # if the object is at the edge of the image, the pose estimation may fail so we won't publish the pose
+            if np.any(np.isnan(pose)):
+                print("Pose estimation failed")
+                quit()
             # world_pose = extrinsic_mat.dot(pose)
             print("Pose estimated")
             print(pose)
