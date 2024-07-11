@@ -66,6 +66,7 @@ class OrganaReader:
 
     self.color_dir = f'{base_dir}/rgb'
     self.depth_dir = f'{base_dir}/depth'
+    self.mask_dir = f'{base_dir}/masks'
     os.makedirs(self.color_dir, exist_ok=True)
     os.makedirs(self.depth_dir, exist_ok=True)
     self.image_counter = 0
@@ -95,21 +96,7 @@ class OrganaReader:
       self.image_counter += 1
 
   def valid_depth(self, depth_image):
-     # Traceback (most recent call last):
-#   File "/home/chemrobot/catkin_ws/src/pose_estimation/src/pose_estimation/pose_estimation.py", line 101, in <module>
-#     depth = reader.get_depth()
-#   File "/home/chemrobot/catkin_ws/src/pose_estimation/src/pose_estimation/datareader.py", line 192, in get_depth
-#     depth = np.load(self.latest_depth_image)
-#   File "/home/chemrobot/anaconda3/envs/foundationpose/lib/python3.9/site-packages/numpy/lib/npyio.py", line 456, in load
-#     return format.read_array(fid, allow_pickle=allow_pickle,
-#   File "/home/chemrobot/anaconda3/envs/foundationpose/lib/python3.9/site-packages/numpy/lib/format.py", line 839, in read_array
-#     array.shape = shape
-# ValueError: cannot reshape array of size 47072 into shape (360,640,1)
-# [INFO] [1720626022.239118]: Saved color image to /home/chemrobot/catkin_ws/src/pose_estimation/src/pose_estimation/perception_data/test9/rgb/001060.jpg
-# [INFO] [1720626022.239847]: Saved depth image to /home/chemrobot/catkin_ws/src/pose_estimation/src/pose_estimation/perception_data/test9/depth/001060.npy
-# Images received and processed
-    # check if the depth image is valid in size
-    if depth_image.shape[0] == self.H and depth_image.shape[1] == self.W:
+    if depth_image.shape[0] == self.H and depth_image.shape[1] == self.W and depth_image.shape[2] == 1:
         return True
     return False
 
@@ -130,7 +117,7 @@ class OrganaReader:
       return img
 
   def process_images(self):
-      if self.color_image is not None and self.depth_image is not None:
+      if self.color_image is not None and self.depth_image is not None and self.valid_depth(self.depth_image):
           color_image_path = os.path.join(self.color_dir, f'{self.image_counter:06d}.jpg')
           cv2.imwrite(color_image_path, self.color_image)
           depth_image_path = os.path.join(self.depth_dir, f'{self.image_counter:06d}.npy')
@@ -179,44 +166,34 @@ class OrganaReader:
     mask_generator.generation()
     print("Mask generation done")
 
-
     # Load the bounding box coordinates
 
   def get_mask(self,i):
-    mask = cv2.imread(self.color_files[i].replace('rgb','masks'),-1)
-    if len(mask.shape)==3:
-      for c in range(3):
-        if mask[...,c].sum()>0:
-          mask = mask[...,c]
-          break
-    mask = cv2.resize(mask, (self.W,self.H), interpolation=cv2.INTER_NEAREST).astype(bool).astype(np.uint8)
-    return mask
-  # def get_depth(self,i):
-  #   depth = np.load(self.depth_paths[i])
-  #   depth = cv2.resize(depth, (self.W,self.H), interpolation=cv2.INTER_NEAREST)
-  #   depth[(depth<0.1) | (depth>=self.zfar)] = 0
-
-  #   if depth.ndim == 3:
-  #   # Extract the first channel
-  #     depth = depth[:, :, 0]
-  # # Now, depth should be 2-dimensional
-  # #  Proceed with the erode_depth function
-  #   depth = erode_depth(depth, radius=2, device='cuda')
-  #   return depth
+    try:
+      
+      mask = cv2.imread(self.mask_dir + '/' + '000001.jpg',-1)
+      if len(mask.shape)==3:
+        for c in range(3):
+          if mask[...,c].sum()>0:
+            mask = mask[...,c]
+            break
+      mask = cv2.resize(mask, (self.W,self.H), interpolation=cv2.INTER_NEAREST).astype(bool).astype(np.uint8)
+      return mask
+    except:
+      return None
   def get_depth(self):
-    #depth = cv2.imread(self.color_files[i].replace('rgb','depth'),-1)/1e3
-    # depth is in npy format
-
-
-    depth = np.load(self.latest_depth_image)
-    depth = cv2.resize(depth, (self.W,self.H), interpolation=cv2.INTER_NEAREST)
-    depth[(depth<0.1) | (depth>=self.zfar)] = 0
-    if depth.ndim == 3:
-    # Extract the first channel
-      depth = depth[:, :, 0]
-    depth = erode_depth(depth, radius=2, device='cuda')
-    # return depth
-    return depth
+    try:
+      depth = np.load(self.latest_depth_image)
+      depth = cv2.resize(depth, (self.W,self.H), interpolation=cv2.INTER_NEAREST)
+      depth[(depth<0.1) | (depth>=self.zfar)] = 0
+      if depth.ndim == 3:
+      # Extract the first channel
+        depth = depth[:, :, 0]
+      depth = erode_depth(depth, radius=2, device='cuda')
+      # return depth
+      return depth
+    except:
+      return None
 
 
   def get_xyz_map(self,i):

@@ -12,9 +12,9 @@ from datareader import *
 
 
 # Pose Publisher Function
-def publish_pose_matrix(pose):
+def publish_pose_matrix(pose, mesh_name='cube'):
     # publish the pose matrix as a flattened tensor
-    pub = rospy.Publisher('pose', Float64MultiArray, queue_size=10)
+    pub = rospy.Publisher(f'pose_{mesh_name}', Float64MultiArray, queue_size=10)
     pose_flat = pose.flatten().tolist()
     
     # Create the MultiArray message
@@ -38,6 +38,41 @@ def publish_pose_matrix(pose):
     pub.publish(pose_msg)
     # Spin
     # rospy.spin()
+import numpy as np
+
+def to_homo(pts):
+    return np.concatenate([pts, np.ones((pts.shape[0], 1))], axis=-1)
+
+def project_bbox_2d(K, ob_in_cam, bbox):
+    min_xyz = bbox.min(axis=0)
+    max_xyz = bbox.max(axis=0)
+
+    corners = np.array([
+        [min_xyz[0], min_xyz[1], min_xyz[2]],
+        [max_xyz[0], min_xyz[1], min_xyz[2]],
+        [max_xyz[0], max_xyz[1], min_xyz[2]],
+        [min_xyz[0], max_xyz[1], min_xyz[2]],
+        [min_xyz[0], min_xyz[1], max_xyz[2]],
+        [max_xyz[0], min_xyz[1], max_xyz[2]],
+        [max_xyz[0], max_xyz[1], max_xyz[2]],
+        [min_xyz[0], max_xyz[1], max_xyz[2]]
+    ])
+
+    projected_corners = (K @ (ob_in_cam @ to_homo(corners).T).T[:, :3].T).T
+    uv = projected_corners[:, :2] / projected_corners[:, 2].reshape(-1, 1)
+
+    return np.round(uv).astype(int)
+
+def is_object_in_frame(K, ob_in_cam, bbox, img_shape, margin=20):
+    projected_bbox = project_bbox_2d(K, ob_in_cam, bbox)
+    
+    x_coords = projected_bbox[:, 0]
+    y_coords = projected_bbox[:, 1]
+    
+    if (x_coords.min() < margin or x_coords.max() > (img_shape[1] - margin) or
+        y_coords.min() < margin or y_coords.max() > (img_shape[0] - margin)):
+        return False
+    return True
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -54,6 +89,7 @@ if __name__ == '__main__':
     set_seed(0)
 
     mesh = trimesh.load(args.mesh_file)
+    mesh_name = os.path.basename(args.mesh_file).replace('.obj', '')
     debug = args.debug
     debug_dir = args.debug_dir
     os.system(f'rm -rf {debug_dir}/* && mkdir -p {debug_dir}/track_vis {debug_dir}/ob_in_cam')
@@ -80,9 +116,8 @@ if __name__ == '__main__':
     reader.depth_callback(depth_image)
     reader.camera_info_callback(camera_info)
     reader.generate_mask()
-    while reader.get_mask(0) is None:
-        rospy.loginfo("Waiting for mask to be generated...")
-        time.sleep(0.1)
+
+
     # Start subscribing continuously
     rospy.Subscriber('/zedm/zed_node/rgb/image_rect_color', Image, reader.color_callback) # set the frequency of the subscriber to 1 Hz
     rospy.Subscriber('/zedm/zed_node/depth/depth_registered', Image, reader.depth_callback)
@@ -102,21 +137,22 @@ if __name__ == '__main__':
         logging.info(f'i: {i}')
         color = reader.get_color()
         depth = reader.get_depth()
-        if True:
+        if color is None or depth is None:
+            rospy.loginfo("Waiting for color and depth images to be read...")
+            continue
+        
+        if i == 0:
             mask = reader.get_mask(0).astype(bool)
-            print(np.unique(depth))
+            #print(np.unique(depth))
             
             # depth[(mask == 1) & (depth > 0.8)] = 0.78
             pose = est.register(K=reader.K, rgb=color, depth=depth, ob_mask=mask, iteration=args.est_refine_iter)
             # extrinsic_mat = np.load(f'{args.test_scene_dir}/gt_poses/ext.npy')
-            # if the object is at the edge of the image, the pose estimation may fail so we won't publish the pose
-            if np.any(np.isnan(pose)):
-                print("Pose estimation failed")
-                quit()
+            
             # world_pose = extrinsic_mat.dot(pose)
             print("Pose estimated")
             print(pose)
-            publish_pose_matrix(pose)
+            publish_pose_matrix(pose, mesh_name=mesh_name)
             print("Pose published")
             
             # if debug >= 3:
@@ -129,6 +165,16 @@ if __name__ == '__main__':
             #     o3d.io.write_point_cloud(f'{debug_dir}/scene_complete.ply', pcd)
         else:
             pose = est.track_one(rgb=color, depth=depth, K=reader.K, iteration=args.track_refine_iter)
+            # if obj is not in the scene, terminate
+           
+            # print("Pose tracked")
+            # print(pose)
+            publish_pose_matrix(pose, mesh_name=mesh_name)
+            # print("Pose published")
+        center_pose = pose @ np.linalg.inv(to_origin)
+        if not is_object_in_frame(reader.K, center_pose, bbox, color.shape):
+            rospy.loginfo("Object is near the edge of the frame, discarding detection.")
+            break
         
         os.makedirs(f'{debug_dir}/ob_in_cam_organa', exist_ok=True)
         i = i +1
@@ -144,4 +190,4 @@ if __name__ == '__main__':
         if debug >= 2:
             os.makedirs(f'{debug_dir}/track_vis', exist_ok=True)
             imageio.imwrite(f'{debug_dir}/track_vis/{reader.id_strs[-1]}.jpg', vis)
-            
+
