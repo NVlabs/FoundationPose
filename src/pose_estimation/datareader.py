@@ -161,17 +161,17 @@ class OrganaReader:
     color = cv2.imread(self.latest_color_image)
     color = cv2.resize(color, (self.W,self.H), interpolation=cv2.INTER_NEAREST)
     return color
-  def generate_mask(self):
-    mask_generator = MaskGenerator(base_dir=self.base_dir)
+  def generate_mask(self, mesh_name):
+    mask_generator = MaskGenerator(base_dir=self.base_dir, mesh_name=mesh_name)
     mask_generator.generation()
     print("Mask generation done")
 
     # Load the bounding box coordinates
 
-  def get_mask(self,i):
+  def get_mask(self,i, mesh_name):
     try:
       
-      mask = cv2.imread(self.mask_dir + '/' + '000001.jpg',-1)
+      mask = cv2.imread(self.mask_dir + '/' + mesh_name + '_mask.jpg')
       if len(mask.shape)==3:
         for c in range(3):
           if mask[...,c].sum()>0:
