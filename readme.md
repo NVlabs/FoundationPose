@@ -98,10 +98,7 @@ conda activate foundationpose
 conda install conda-forge::eigen=3.4.0
 
 # Setup the eigen3 path properly
-setup_file="bundlesdf/mycuda/setup.py"
-# Use sed to replace the include_dirs section
-sed -i.bak '/include_dirs=\[/,/\],/c\    include_dirs=[\n        "'"$CONDA_PREFIX"'/include/eigen3",\n    ],' "$setup_file"
-rm -f "${setup_file}.bak"
+sed -i '' "s#/usr/local/include/#$CONDA_PREFIX/include/#" bundlesdf/mycuda/setup.py
 
 # install dependencies
 python -m pip install -r requirements.txt
