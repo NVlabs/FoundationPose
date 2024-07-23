@@ -84,7 +84,9 @@ class TrackerRos:
   def grab_depth(self, msg):
     depth = CvBridge().imgmsg_to_cv2(msg, desired_encoding="passthrough")
     # depth = fill_depth(depth/1e3,max_depth=2.0,extrapolate=False)
-    self.depth = depth/1000
+    depth = depth/1000
+    depth = depth[(depth>0.1) | (depth<5)]
+    self.depth = depth
     # self.depth = (depth/1000).astype(np.uint16)
 
     # np.save("depth_img.npy", self.depth)
