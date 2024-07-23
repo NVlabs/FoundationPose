@@ -67,7 +67,6 @@ python3 run_ROS.py
 ```
 You should see the object being tracked.
 
-
 ## Acknowldegement
 This repository is based on the work and takes major components from FoundationPose developed by Bowen et. al. (NVLabs) and GroundedSAM from IDEA-Research and Meta.
 
