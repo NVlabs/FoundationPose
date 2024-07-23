@@ -25,7 +25,6 @@ Due to dependecy clashes, FoundationPose and GroundedSAM ROS nodes work in separ
 ```
 docker pull ghcr.io/shubho-upenn/ros_fp_new_env:latest	## FoundationPose Container Image
 docker pull ghcr.io/shubho-upenn/gsa_ros:latest		## Grounded-Segment-Anything Container Image
-
 ```
 ### Prerequisites
 1. GPU with Cuda >= 11.7
