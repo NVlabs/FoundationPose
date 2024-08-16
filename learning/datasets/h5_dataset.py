@@ -91,7 +91,7 @@ class PairH5Dataset(torch.utils.data.Dataset):
       batch.xyz_mapAs = kornia.geometry.transform.warp_perspective(batch.xyz_mapAs, tf_to_crops, dsize=(H,W), mode='nearest', align_corners=False)
     batch.xyz_mapAs = batch.xyz_mapAs.cuda()
     if self.cfg['normalize_xyz']:
-      invalid = batch.xyz_mapAs[:,2:3]<0.1
+      invalid = batch.xyz_mapAs[:,2:3]<0.001
     batch.xyz_mapAs = batch.xyz_mapAs-batch.poseA[:,:3,3].reshape(bs,3,1,1)
     if self.cfg['normalize_xyz']:
       batch.xyz_mapAs *= 1/mesh_radius.reshape(bs,1,1,1)
@@ -104,7 +104,7 @@ class PairH5Dataset(torch.utils.data.Dataset):
       batch.xyz_mapBs = kornia.geometry.transform.warp_perspective(batch.xyz_mapBs, tf_to_crops, dsize=(H,W), mode='nearest', align_corners=False)
     batch.xyz_mapBs = batch.xyz_mapBs.cuda()
     if self.cfg['normalize_xyz']:
-      invalid = batch.xyz_mapBs[:,2:3]<0.1
+      invalid = batch.xyz_mapBs[:,2:3]<0.001
     batch.xyz_mapBs = batch.xyz_mapBs-batch.poseA[:,:3,3].reshape(bs,3,1,1)
     if self.cfg['normalize_xyz']:
       batch.xyz_mapBs *= 1/mesh_radius.reshape(bs,1,1,1)

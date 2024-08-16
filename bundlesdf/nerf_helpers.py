@@ -257,7 +257,7 @@ def preprocess_data(rgbs,depths,masks,normal_maps,poses,sc_factor,translation):
     @normal_maps: (N,H,W,3)
     @poses: (N,4,4)
     '''
-    depths[depths<0.1] = BAD_DEPTH
+    depths[depths<0.001] = BAD_DEPTH
     if masks is not None:
         rgbs[masks==0] = BAD_COLOR
         depths[masks==0] = BAD_DEPTH

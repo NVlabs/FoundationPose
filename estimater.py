@@ -141,7 +141,7 @@ class FoundationPose:
       return np.zeros((3))
     uc = (us.min()+us.max())/2.0
     vc = (vs.min()+vs.max())/2.0
-    valid = mask.astype(bool) & (depth>=0.1)
+    valid = mask.astype(bool) & (depth>=0.001)
     if not valid.any():
       logging.info(f"valid is empty")
       return np.zeros((3))
@@ -175,13 +175,13 @@ class FoundationPose:
 
     if self.debug>=2:
       xyz_map = depth2xyzmap(depth, K)
-      valid = xyz_map[...,2]>=0.1
+      valid = xyz_map[...,2]>=0.001
       pcd = toOpen3dCloud(xyz_map[valid], rgb[valid])
       o3d.io.write_point_cloud(f'{self.debug_dir}/scene_raw.ply',pcd)
       cv2.imwrite(f'{self.debug_dir}/ob_mask.png', (ob_mask*255.0).clip(0,255))
 
     normal_map = None
-    valid = (depth>=0.1) & (ob_mask>0)
+    valid = (depth>=0.001) & (ob_mask>0)
     if valid.sum()<4:
       logging.info(f'valid too small, return')
       pose = np.eye(4)
@@ -191,7 +191,7 @@ class FoundationPose:
     if self.debug>=2:
       imageio.imwrite(f'{self.debug_dir}/color.png', rgb)
       cv2.imwrite(f'{self.debug_dir}/depth.png', (depth*1000).astype(np.uint16))
-      valid = xyz_map[...,2]>=0.1
+      valid = xyz_map[...,2]>=0.001
       pcd = toOpen3dCloud(xyz_map[valid], rgb[valid])
       o3d.io.write_point_cloud(f'{self.debug_dir}/scene_complete.ply',pcd)
 
