@@ -5,4 +5,4 @@ docker run --gpus all -it --rm --net=host --privileged \
 	-v "${PWD}":/home/appuser/Grounded-Segment-Anything \
 	-e DISPLAY=$DISPLAY \
 	--name=gsa_ros \
-	--ipc=host -it gsa_ros
+	--ipc=host -it ghcr.io/shubho-upenn/gsa_ros:latest
