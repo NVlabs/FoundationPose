@@ -147,7 +147,7 @@ class FoundationPose:
       return np.zeros((3))
 
     zc = np.median(depth[valid])
-    # print(K)
+
     center = (np.linalg.inv(K)@np.asarray([uc,vc,1]).reshape(3,1))*zc
 
     if self.debug>=2:
@@ -182,10 +182,8 @@ class FoundationPose:
       cv2.imwrite(f'{self.debug_dir}/ob_mask.png', (ob_mask*255.0).clip(0,255))
 
     normal_map = None
-    # print(depth)
-    # print(ob_mask)
+
     valid = (depth>=0.1) & (ob_mask>0)
-    print(valid.sum())
     if valid.sum()<4:
       logging.info(f'valid too small, return')
       pose = np.eye(4)
@@ -256,7 +254,6 @@ class FoundationPose:
       logging.info("Please init pose by register first")
       raise RuntimeError
     logging.info("Welcome")
-    print(depth.dtype)
     # depth = depth.astype(np.int16)
     depth = torch.as_tensor(depth, device='cuda', dtype=torch.float)
     depth = erode_depth(depth, radius=2, device='cuda')
