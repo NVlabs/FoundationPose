@@ -10,7 +10,9 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     code_dir = os.path.dirname(os.path.realpath(__file__))
     # specify the path to the mesh file here (e.g. textured_simple.obj)
+    meshes = ['conical_flask_250ml','beaker_250ml','conical_flask_500ml','beaker_30ml']
     mesh_name = 'conical_flask_250ml'
+
     parser.add_argument('--mesh_file', type=str, default=f'{code_dir}/perception_data/objects/{mesh_name}.obj')
     parser.add_argument('--test_scene_dir', type=str, default=f'{code_dir}/perception_data/test9')
     parser.add_argument('--est_refine_iter', type=int, default=5)
