@@ -11,47 +11,11 @@ from Utils import *
 import json,os,sys
 import open3d
 #from local_utils.config_utils import parse_config_utils
+from segmentation import MaskGenerator
 
 BOP_LIST = ['lmo','tless','ycbv','hb','tudl','icbin','itodd']
 BOP_DIR = os.getenv('BOP_DIR')
 
-def get_bop_reader(video_dir, zfar=np.inf):
-  if 'ycbv' in video_dir or 'YCB' in video_dir:
-    return YcbVideoReader(video_dir, zfar=zfar)
-  if 'lmo' in video_dir or 'LINEMOD-O' in video_dir:
-    return LinemodOcclusionReader(video_dir, zfar=zfar)
-  if 'tless' in video_dir or 'TLESS' in video_dir:
-    return TlessReader(video_dir, zfar=zfar)
-  if 'hb' in video_dir:
-    return HomebrewedReader(video_dir, zfar=zfar)
-  if 'tudl' in video_dir:
-    return TudlReader(video_dir, zfar=zfar)
-  if 'icbin' in video_dir:
-    return IcbinReader(video_dir, zfar=zfar)
-  if 'itodd' in video_dir:
-    return ItoddReader(video_dir, zfar=zfar)
-  else:
-    raise RuntimeError
-
-
-def get_bop_video_dirs(dataset):
-  if dataset=='ycbv':
-    video_dirs = sorted(glob.glob(f'{BOP_DIR}/ycbv/test/*'))
-  elif dataset=='lmo':
-    video_dirs = sorted(glob.glob(f'{BOP_DIR}/lmo/lmo_test_bop19/test/*'))
-  elif dataset=='tless':
-    video_dirs = sorted(glob.glob(f'{BOP_DIR}/tless/tless_test_primesense_bop19/test_primesense/*'))
-  elif dataset=='hb':
-    video_dirs = sorted(glob.glob(f'{BOP_DIR}/hb/hb_test_primesense_bop19/test_primesense/*'))
-  elif dataset=='tudl':
-    video_dirs = sorted(glob.glob(f'{BOP_DIR}/tudl/tudl_test_bop19/test/*'))
-  elif dataset=='icbin':
-    video_dirs = sorted(glob.glob(f'{BOP_DIR}/icbin/icbin_test_bop19/test/*'))
-  elif dataset=='itodd':
-    video_dirs = sorted(glob.glob(f'{BOP_DIR}/itodd/itodd_test_bop19/test/*'))
-  else:
-    raise RuntimeError
-  return video_dirs
 
 
 class OrganaReader:
@@ -64,16 +28,17 @@ class OrganaReader:
     #self.load_symmetry_tfs()
     #self.color_files = sorted(glob.glob(f"{self.base_dir}/**/**/*.jpg"))
     # specify the path to the rgb images here and makr sure the images are in the right format
-    self.color_files = sorted(glob.glob(f"{self.base_dir}/test7/rgb/*.png"))
+    self.color_files = sorted(glob.glob(f"{self.base_dir}/rgb/*.jpg"))
+    print(self.color_files)
     # camera intrinsic matrix for the organa dataset
-    # self.K = np.array([[729.42260742,   0.        , 617.55908203],
-    #                             [  0.        , 729.42260742, 359.8135376 ],
-    #                         [  0.        ,   0.        ,   1.        ]])
+    self.K = np.array([[729.42260742,   0.        , 617.55908203],
+                                [  0.        , 729.42260742, 359.8135376 ],
+                            [  0.        ,   0.        ,   1.        ]])
 
     # camera intrinsic matrix for the foundationpose demo dataset
-    self.K = np.array([[3.195820007324218750e+02, 0.000000000000000000e+00, 3.202149847676955687e+02],
- [0.000000000000000000e+00, 4.171186828613281250e+02, 2.443486680871046701e+02],
- [0.000000000000000000e+00, 0.000000000000000000e+00, 1.000000000000000000e+00]])
+#     self.K = np.array([[3.195820007324218750e+02, 0.000000000000000000e+00, 3.202149847676955687e+02],
+#  [0.000000000000000000e+00, 4.171186828613281250e+02, 2.443486680871046701e+02],
+#  [0.000000000000000000e+00, 0.000000000000000000e+00, 1.000000000000000000e+00]])
   # camera intrinsic matrix for the RGBD object dataset
 #     self.K = np.array([
 # [510.0, 0, 319.5],
@@ -94,8 +59,8 @@ class OrganaReader:
     # #
     # self.depth_paths = sorted(glob.glob(f'{base_dir}/**/**/depth_*.npy', recursive=True))
     # self.camera_pose_paths = sorted(glob.glob(f'{base_dir}/**/**/camera_pose_*.npy', recursive=True))
-    self.depth_paths = sorted(glob.glob(f'{self.base_dir}/test4/depth/*.png', recursive=True))
-
+    self.depth_paths = sorted(glob.glob(f'{self.base_dir}/test9/depth/*.jpg', recursive=True))
+    
     self.labels = glob.glob(f'{base_dir}/**/**/*.xml', recursive=True)
     #self.metadata = pd.read_csv(f'{base_dir}/metadata.csv')
 
@@ -113,6 +78,10 @@ class OrganaReader:
     color = imageio.imread(self.color_files[i])[...,:3]
     color = cv2.resize(color, (self.W,self.H), interpolation=cv2.INTER_NEAREST)
     return color
+  def generate_mask(self, mesh_name):
+    mask_generator = MaskGenerator(base_dir=self.base_dir, mesh_name=mesh_name)
+    mask_generator.generation()
+    print("Mask generation done")
   def get_mask(self,i):
     mask = cv2.imread(self.color_files[i].replace('rgb','masks'),-1)
     if len(mask.shape)==3:
@@ -135,7 +104,9 @@ class OrganaReader:
   #   depth = erode_depth(depth, radius=2, device='cuda')
   #   return depth
   def get_depth(self,i):
-    depth = cv2.imread(self.color_files[i].replace('rgb','depth'),-1)/1e3
+    depth = np.load(self.color_files[i].replace('rgb','depth').replace('jpg','npy'))
+    #depth = cv2.imread(self.color_files[i].replace('rgb','depth'),-1)/1e3
+
     depth = cv2.resize(depth, (self.W,self.H), interpolation=cv2.INTER_NEAREST)
     depth[(depth<0.1) | (depth>=self.zfar)] = 0
     if depth.ndim == 3:
@@ -182,11 +153,11 @@ class YcbineoatReader:
     self.video_dir = video_dir
     self.downscale = downscale
     self.zfar = zfar
-    self.color_files = sorted(glob.glob(f"{self.video_dir}/rgb/*.png"))
+    self.color_files = sorted(glob.glob(f"{self.video_dir}/rgb/*.jpg"))
     self.K = np.loadtxt(f'{video_dir}/cam_K.txt').reshape(3,3)
     self.id_strs = []
     for color_file in self.color_files:
-      id_str = os.path.basename(color_file).replace('.png','')
+      id_str = os.path.basename(color_file).replace('.jpg','')
       self.id_strs.append(id_str)
     self.H,self.W = cv2.imread(self.color_files[0]).shape[:2]
 
@@ -342,7 +313,7 @@ class BopBaseReader:
     else:
       mask_dir = os.path.dirname(self.color_files[0]).replace('rgb','mask_visib')
       id_str = self.id_strs[i_frame]
-      mask_files = sorted(glob.glob(f'{mask_dir}/{id_str}_*.png'))
+      mask_files = sorted(glob.glob(f'{mask_dir}/{id_str}_*.jpg'))
       ob_ids = []
       for mask_file in mask_files:
         ob_id = int(os.path.basename(mask_file).split('.')[0].split('_')[1])
@@ -395,13 +366,13 @@ class BopBaseReader:
         if k['obj_id']==ob_id:
           break
         pos += 1
-      mask_file = f'{self.base_dir}/{type}/{name:06d}_{pos:06d}.png'
+      mask_file = f'{self.base_dir}/{type}/{name:06d}_{pos:06d}.jpg'
       if not os.path.exists(mask_file):
         logging.info(f'{mask_file} not found')
         return None
     else:
       # mask_dir = os.path.dirname(self.color_files[0]).replace('rgb',type)
-      # mask_file = f'{mask_dir}/{self.id_strs[i_frame]}_{ob_id:06d}.png'
+      # mask_file = f'{mask_dir}/{self.id_strs[i_frame]}_{ob_id:06d}.jpg'
       raise RuntimeError
     mask = cv2.imread(mask_file, -1)
     if self.resize!=1:
@@ -448,7 +419,7 @@ class BopBaseReader:
         cur[:3,:3] = np.array(k['cam_R_m2c']).reshape(3,3)
         cur[:3,3] = np.array(k['cam_t_m2c'])/1e3
         if mask is not None:  # When multi-instance exists, use mask to determine which one
-          gt_mask = cv2.imread(f'{self.base_dir}/mask_visib/{self.id_strs[i_frame]}_{i_k:06d}.png', -1).astype(bool)
+          gt_mask = cv2.imread(f'{self.base_dir}/mask_visib/{self.id_strs[i_frame]}_{i_k:06d}.jpg', -1).astype(bool)
           intersect = (gt_mask*mask).astype(bool)
           union = (gt_mask+mask).astype(bool)
           iou = float(intersect.sum())/union.sum()
@@ -528,7 +499,7 @@ class LinemodReader(LinemodOcclusionReader):
       self.color_files = []
       for line in lines:
         id = int(line)
-        self.color_files.append(f'{self.base_dir}/rgb/{id:06d}.png')
+        self.color_files.append(f'{self.base_dir}/rgb/{id:06d}.jpg')
       self.make_id_strs()
 
     self.ob_ids = np.setdiff1d(np.arange(1,16), np.array([7,3])).tolist()  # Exclude bowl and mug
@@ -615,7 +586,7 @@ class YcbVideoReader(BopBaseReader):
     mesh_file = self.get_gt_mesh_file(ob_id)
     mesh = trimesh.load(mesh_file, process=False)
     mesh.vertices *= 1e-3
-    tex_file = mesh_file.replace('.ply','.png')
+    tex_file = mesh_file.replace('.ply','.jpg')
     if os.path.exists(tex_file):
       from PIL import Image
       im = Image.open(tex_file)
