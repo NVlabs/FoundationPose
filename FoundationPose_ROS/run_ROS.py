@@ -56,8 +56,10 @@ class TrackerRos:
     # self.tf_pub = tf.broadcaster.TransformBroadcaster()
 
   def register(self):
-    print(self.depth.dtype)
-    self.depth = self.depth.astype(np.int16)
+    # print(self.depth.dtype)
+    # self.depth = self.depth.astype(np.int16)
+    self.depth = self.depth
+    
     self.pose = self.est.register(K=self.cam_K, rgb=self.color, depth=self.depth, ob_mask=self.mask, iteration=5)
     # print(self.pose)
 
@@ -127,9 +129,10 @@ class TrackerRos:
   def on_track(self):
 
     print("Tracking")
-    self.depth = self.depth.astype(np.int16)
+    # self.depth = self.depth.astype(np.int16)
+    self.depth = self.depth
     # print(self.depth.dtype)
-    self.pose = est.track_one(rgb=self.color.astype(np.int8), depth=self.depth, K=self.cam_K, iteration=5)
+    self.pose = self.est.track_one(rgb=self.color, depth=self.depth, K=self.cam_K, iteration=5)
 
     trans = self.pose[:3,3]
     # q_wxyz = (Rotation.from_matrix(pose[:3, :3])).as_quat()
@@ -200,6 +203,8 @@ if __name__=="__main__":
       ros_tracker.on_track()
     
     if debug>=1:
+      # cv2.imshow('2', depth_to_vis(ros_tracker.depth.reshape(480,640), inverse=False))
+      # cv2.waitKey(1)
       center_pose = ros_tracker.pose@np.linalg.inv(to_origin)
       vis = draw_posed_3d_box(ros_tracker.cam_K, img=ros_tracker.color, ob_in_cam=center_pose, bbox=bbox)
       vis = draw_xyz_axis(ros_tracker.color, ob_in_cam=center_pose, scale=0.1, K=ros_tracker.cam_K, thickness=3, transparency=0, is_input_rgb=True)

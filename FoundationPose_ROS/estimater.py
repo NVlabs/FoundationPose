@@ -257,10 +257,14 @@ class FoundationPose:
       raise RuntimeError
     logging.info("Welcome")
     print(depth.dtype)
-    depth = depth.astype(np.int16)
+    # depth = depth.astype(np.int16)
     depth = torch.as_tensor(depth, device='cuda', dtype=torch.float)
     depth = erode_depth(depth, radius=2, device='cuda')
+    
     depth = bilateral_filter_depth(depth, radius=2, device='cuda')
+    # cv2.imshow('3', depth_to_vis(depth.detach().cpu().numpy().reshape(480,640), inverse=False))
+    # cv2.waitKey(1)
+    
     # logging.info("depth processing done")
 
     xyz_map = depth2xyzmap_batch(depth[None], torch.as_tensor(K, dtype=torch.float, device='cuda')[None], zfar=np.inf)[0]
