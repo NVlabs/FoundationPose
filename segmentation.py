@@ -5,9 +5,9 @@ import argparse
 import os
 #import rospy
 class MaskGenerator:
-    def __init__(self, base_dir, mesh_name):
+    def __init__(self, base_dir, mesh_name, frame_id):
         self.base_dir = base_dir
-        self.color_files = sorted(glob.glob(f"{self.base_dir}/rgb/*.jpg"))
+        self.color_files = sorted(glob.glob(f"{self.base_dir}/**/*.jpg"))
         self.mask_dir = f"{self.base_dir}/masks"
         # Initialize global variables
         self.top_left = (0, 0)
@@ -15,6 +15,7 @@ class MaskGenerator:
         self.drawing = False
         self.image = None
         self.mesh_name = mesh_name
+        self.frame_id = frame_id
 
     # Mouse callback function
     def draw_rectangle(self, event, x, y, flags, param):
@@ -27,13 +28,13 @@ class MaskGenerator:
                 image_copy = self.image.copy()
                 self.bottom_right = (x, y)
                 cv2.rectangle(image_copy, self.top_left, self.bottom_right, (0, 255, 0), 2)
-                cv2.imshow(f'{self.mesh_name}', image_copy)
+                cv2.imshow(f'{self.mesh_name}_{self.frame_id}', image_copy)
 
         elif event == cv2.EVENT_LBUTTONUP:
             self.drawing = False
             self.bottom_right = (x, y)
             cv2.rectangle(self.image, self.top_left, self.bottom_right, (0, 255, 0), 2)
-            cv2.imshow(f'{self.mesh_name}', self.image)
+            cv2.imshow(f'{self.mesh_name}_{self.frame_id}', self.image)
             self.create_mask_and_display_result()
 
     # Function to create mask and display result
@@ -42,7 +43,7 @@ class MaskGenerator:
         cv2.rectangle(mask, self.top_left, self.bottom_right, (255, 255, 255), thickness=cv2.FILLED)
         white_image = np.ones_like(self.image) * 255
         result = np.where(mask == 255, white_image, 0)
-        mask_path = f"{self.base_dir}/masks/5.jpg" 
+        mask_path = f"{self.base_dir}/masks/{self.mesh_name}_mask_{self.frame_id}.png" 
         if not os.path.exists(self.mask_dir):
             os.makedirs(self.mask_dir)
         cv2.imwrite(mask_path, result)

@@ -28,7 +28,9 @@ class OrganaReader:
     #self.load_symmetry_tfs()
     #self.color_files = sorted(glob.glob(f"{self.base_dir}/**/**/*.jpg"))
     # specify the path to the rgb images here and makr sure the images are in the right format
-    self.color_files = sorted(glob.glob(f"{self.base_dir}/rgb/*.jpg"))
+    self.color_files = sorted(glob.glob(f"{self.base_dir}/**/*.jpg"))
+    self.depth_files = sorted(glob.glob(f"{self.base_dir}/**/*.npy"))
+    self.mask_dir = f"{self.base_dir}/masks"
     print(self.color_files)
     # camera intrinsic matrix for the organa dataset
     self.K = np.array([[729.42260742,   0.        , 617.55908203],
@@ -59,8 +61,8 @@ class OrganaReader:
     # #
     # self.depth_paths = sorted(glob.glob(f'{base_dir}/**/**/depth_*.npy', recursive=True))
     # self.camera_pose_paths = sorted(glob.glob(f'{base_dir}/**/**/camera_pose_*.npy', recursive=True))
-    self.depth_paths = sorted(glob.glob(f'{self.base_dir}/test9/depth/*.jpg', recursive=True))
     
+
     self.labels = glob.glob(f'{base_dir}/**/**/*.xml', recursive=True)
     #self.metadata = pd.read_csv(f'{base_dir}/metadata.csv')
 
@@ -78,12 +80,12 @@ class OrganaReader:
     color = imageio.imread(self.color_files[i])[...,:3]
     color = cv2.resize(color, (self.W,self.H), interpolation=cv2.INTER_NEAREST)
     return color
-  def generate_mask(self, mesh_name):
-    mask_generator = MaskGenerator(base_dir=self.base_dir, mesh_name=mesh_name)
+  def generate_mask(self, mesh_name, frame_id):
+    mask_generator = MaskGenerator(base_dir=self.base_dir, mesh_name=mesh_name, frame_id=frame_id)
     mask_generator.generation()
     print("Mask generation done")
-  def get_mask(self,i):
-    mask = cv2.imread(self.color_files[i].replace('rgb','masks'),-1)
+  def get_mask(self,i, mesh_name, frame_id):
+    mask = cv2.imread(f'{self.mask_dir}' + '/' + mesh_name + '_mask'+f'_{frame_id}.png')
     if len(mask.shape)==3:
       for c in range(3):
         if mask[...,c].sum()>0:
@@ -104,7 +106,7 @@ class OrganaReader:
   #   depth = erode_depth(depth, radius=2, device='cuda')
   #   return depth
   def get_depth(self,i):
-    depth = np.load(self.color_files[i].replace('rgb','depth').replace('jpg','npy'))
+    depth = np.load(self.depth_files[i])
     #depth = cv2.imread(self.color_files[i].replace('rgb','depth'),-1)/1e3
 
     depth = cv2.resize(depth, (self.W,self.H), interpolation=cv2.INTER_NEAREST)
@@ -135,12 +137,8 @@ class OrganaReader:
     pass
   def evaluate(self):
     # compare the estimated poses with the ground truth poses in the dataset .tf
+
     pass
-  def get_rgbd(self,i):
-    color_raw = open3d.io.read_image(self.color_files[i])
-    depth_raw = open3d.io.read_image(self.depth_paths[i])
-    rgbd_image = open3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw)
-    return rgbd_image
   def get_point_cloud(self,i):
     rgbd_image = self.get_rgbd(i)
     pcd = open3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, self.K)
