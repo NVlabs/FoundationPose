@@ -9,6 +9,7 @@ class MaskGenerator:
         self.base_dir = base_dir
         self.color_files = sorted(glob.glob(f"{self.base_dir}/**/*.jpg"))
         self.mask_dir = f"{self.base_dir}/masks"
+        self.camera_pose = sorted
         # Initialize global variables
         self.top_left = (0, 0)
         self.bottom_right = (0, 0)
@@ -47,21 +48,21 @@ class MaskGenerator:
         if not os.path.exists(self.mask_dir):
             os.makedirs(self.mask_dir)
         cv2.imwrite(mask_path, result)
-        print(f"Mask saved to s{mask_path}")
+        print(f"Mask saved to {mask_path}")
         cv2.imshow('Result', result)
 
     # Function to run the mask generation process
     def generation(self):
         # Load the image
 
-        self.image = cv2.imread(self.color_files[0])
+        self.image = cv2.imread(self.color_files[self.frame_id])
 
         # Create a window and set the mouse callback function
-        cv2.namedWindow(f'{self.mesh_name}')
-        cv2.setMouseCallback(f'{self.mesh_name}', self.draw_rectangle)
+        cv2.namedWindow(f'{self.mesh_name}_{self.frame_id}')
+        cv2.setMouseCallback(f'{self.mesh_name}_{self.frame_id}', self.draw_rectangle)
 
         # Display the image and wait for the user to draw the bounding box
-        cv2.imshow(f'{self.mesh_name}', self.image)
+        cv2.imshow(f'{self.mesh_name}_{self.frame_id}', self.image)
         
         cv2.waitKey(0)
         cv2.destroyAllWindows()

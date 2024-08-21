@@ -153,6 +153,7 @@ class PerceptionEval:
         self.camera_pose_paths = glob.glob('perception_data/**/camera_pose_*.npy', recursive=True)
         self.metadata_paths = glob.glob('perception_data/**/*.json', recursive=True)
         self.labels = glob.glob('perception_data/**/*.xml', recursive=True)
+        self.gt_position_files = glob.glob('perception_data/**/*.tf', recursive=True)
         
         self.objects = pd.read_csv('objects.csv')
         self.args = init_args()

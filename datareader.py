@@ -29,7 +29,11 @@ class OrganaReader:
     #self.color_files = sorted(glob.glob(f"{self.base_dir}/**/**/*.jpg"))
     # specify the path to the rgb images here and makr sure the images are in the right format
     self.color_files = sorted(glob.glob(f"{self.base_dir}/**/*.jpg"))
-    self.depth_files = sorted(glob.glob(f"{self.base_dir}/**/*.npy"))
+    self.depth_files = sorted(glob.glob(f"{self.base_dir}/**/depth_*.npy"))
+    self.camera_pose_files = sorted(glob.glob(f"{self.base_dir}/**/camera_pose_*.npy"))
+    self.bounding_box_files = sorted(glob.glob(f"{self.base_dir}/**/bounding_box_*.npy"))
+    self.labels = glob.glob(f'{base_dir}/**/*.xml', recursive=True)
+    self.gt_pose_files = sorted(glob.glob(f'{self.base_dir}/**/*.tf'))
     self.mask_dir = f"{self.base_dir}/masks"
     print(self.color_files)
     # camera intrinsic matrix for the organa dataset
@@ -77,6 +81,7 @@ class OrganaReader:
       logging.info("GT pose not found, return None")
       return None
   def get_color(self,i):
+    print(self.color_files[i])
     color = imageio.imread(self.color_files[i])[...,:3]
     color = cv2.resize(color, (self.W,self.H), interpolation=cv2.INTER_NEAREST)
     return color
@@ -106,6 +111,7 @@ class OrganaReader:
   #   depth = erode_depth(depth, radius=2, device='cuda')
   #   return depth
   def get_depth(self,i):
+    print(self.depth_files[i])
     depth = np.load(self.depth_files[i])
     #depth = cv2.imread(self.color_files[i].replace('rgb','depth'),-1)/1e3
 

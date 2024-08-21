@@ -117,10 +117,10 @@ IOU_THRESHOLD = 0.3
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     code_dir = os.path.dirname(os.path.realpath(__file__))
-    mesh_files = ['conical_flask_250ml.obj', 'beaker_250ml.obj', 'conical_flask_500ml.obj', 'beaker_30ml.obj']
+    mesh_files = ['beaker_250ml.obj', 'conical_flask_500ml.obj','conical_flask_250ml.obj', 'beaker_30ml.obj']
     meshes = [f'{code_dir}/perception_data/objects/{mesh}' for mesh in mesh_files]
     parser.add_argument('--mesh_files', type=str, nargs='+', default=meshes)
-    parser.add_argument('--test_scene_dir', type=str, default=f'{code_dir}/perception_data/black_paper')
+    parser.add_argument('--test_scene_dir', type=str, default=f'{code_dir}/perception_data/table/00')
     parser.add_argument('--est_refine_iter', type=int, default=5)
     parser.add_argument('--track_refine_iter', type=int, default=2)
     parser.add_argument('--debug', type=int, default=1)
@@ -146,35 +146,42 @@ if __name__ == '__main__':
     os.system(f'rm -rf {debug_dir}/* && mkdir -p {debug_dir}/track_vis {debug_dir}/ob_in_cam')
 
     reader = OrganaReader(base_dir=args.test_scene_dir, shorter_side=None, zfar=np.inf)
-
-    # Initialize pose estimators for each object
-    estimators = []
     
-    for mesh_obj in mesh_objects:
-        logging.info(f'Processing {mesh_obj.mesh_name}')
-        
-        scorer = ScorePredictor()
-        refiner = PoseRefinePredictor()
-        glctx = dr.RasterizeCudaContext()
-        est = FoundationPose(
-            model_pts=mesh_obj.mesh.vertices, 
-            model_normals=mesh_obj.mesh.vertex_normals, 
-            mesh=mesh_obj.mesh, 
-            scorer=scorer, 
-            refiner=refiner, 
-            debug_dir=debug_dir, 
-            debug=debug, 
-            glctx=glctx
-        )
-        estimators.append(est)
-        logging.info(f"Estimator for {mesh_obj.mesh_name} initialized")
+    # Initialize pose estimators for each object
+    # show the color image and the depth image files
+    print(reader.color_files)
+    print(reader.depth_files)
 
+    
     i = 0
     
     while True:
+        estimators = []
+    
+        for mesh_obj in mesh_objects:
+            logging.info(f'Processing {mesh_obj.mesh_name}')
+            
+            scorer = ScorePredictor()
+            refiner = PoseRefinePredictor()
+            glctx = dr.RasterizeCudaContext()
+            print(mesh_obj.mesh)
+            est = FoundationPose(
+                model_pts=mesh_obj.mesh.vertices, 
+                model_normals=mesh_obj.mesh.vertex_normals, 
+                mesh=mesh_obj.mesh, 
+                scorer=scorer, 
+                refiner=refiner, 
+                debug_dir=debug_dir, 
+                debug=debug, 
+                glctx=glctx
+            )
+            estimators.append(est)
+            logging.info(f"Estimator for {mesh_obj.mesh_name} initialized")
+
         logging.info(f'Frame {i}')
         color = reader.get_color(i)
         depth = reader.get_depth(i)
+        print(reader.camera_pose_files[i])
         for mesh_obj in mesh_objects:
           reader.generate_mask(mesh_obj.mesh_name,i)
         if color is None or depth is None:
@@ -182,12 +189,7 @@ if __name__ == '__main__':
             continue
         
         for est, mesh_obj in zip(estimators, mesh_objects):
-            if all([obj.estimated for obj in mesh_objects]):
-                logging.info("All objects have been estimated, quitting...")
-                break
-            
-            if not mesh_obj.estimated:
-                if i == 0:
+                if True:
                     mask = reader.get_mask(i, mesh_obj.mesh_name, i).astype(bool)
                     pose = est.register(K=reader.K, rgb=color, depth=depth, ob_mask=mask, iteration=args.est_refine_iter)
                     logging.info(f"Pose estimated for {mesh_obj.mesh_name}")
@@ -195,12 +197,11 @@ if __name__ == '__main__':
                 else:
                     pose = est.track_one(rgb=color, depth=depth, K=reader.K, iteration=args.track_refine_iter)
                     mesh_obj.pose = pose
-                
+                world_pose = np.matmul(np.load(reader.camera_pose_files[i]) , pose )
+                print(f'pose_{mesh_obj.mesh_name}_{i}', world_pose)
+                # save the pose to the same directory as the camera pose files 
+                np.save(f'{reader.camera_pose_files[i].replace(".npy","").replace("camera_pose", "estimated")}_{mesh_obj.mesh_name}_{i}', world_pose)
                 center_pose = mesh_obj.pose @ np.linalg.inv(mesh_obj.to_origin)
-                if not is_object_in_frame(reader.K, center_pose, mesh_obj.bbox, color.shape):
-                    mesh_obj.estimated = True
-                    logging.info(f"Object {mesh_obj.mesh_name} is near the edge of the frame, discarding detection.")
-
                 if debug >= 1:
                     vis = draw_posed_3d_box(reader.K, img=color, ob_in_cam=center_pose, bbox=mesh_obj.bbox)
                     vis = draw_xyz_axis(color, ob_in_cam=center_pose, scale=0.1, K=reader.K, thickness=3, transparency=0, is_input_rgb=True)
