@@ -120,7 +120,7 @@ if __name__ == '__main__':
     mesh_files = ['beaker_250ml.obj', 'conical_flask_500ml.obj','conical_flask_250ml.obj', 'beaker_30ml.obj']
     meshes = [f'{code_dir}/perception_data/objects/{mesh}' for mesh in mesh_files]
     parser.add_argument('--mesh_files', type=str, nargs='+', default=meshes)
-    parser.add_argument('--test_scene_dir', type=str, default=f'{code_dir}/perception_data/table/00')
+    parser.add_argument('--test_scene_dir', type=str, default=f'{code_dir}/perception_data/white_paper/11')
     parser.add_argument('--est_refine_iter', type=int, default=5)
     parser.add_argument('--track_refine_iter', type=int, default=2)
     parser.add_argument('--debug', type=int, default=1)
