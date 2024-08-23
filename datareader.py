@@ -28,13 +28,22 @@ class OrganaReader:
     #self.load_symmetry_tfs()
     #self.color_files = sorted(glob.glob(f"{self.base_dir}/**/**/*.jpg"))
     # specify the path to the rgb images here and makr sure the images are in the right format
-    self.color_files = sorted(glob.glob(f"{self.base_dir}/**/*.jpg"))
-    self.depth_files = sorted(glob.glob(f"{self.base_dir}/**/depth_*.npy"))
-    self.camera_pose_files = sorted(glob.glob(f"{self.base_dir}/**/camera_pose_*.npy"))
-    self.bounding_box_files = sorted(glob.glob(f"{self.base_dir}/**/bounding_box_*.npy"))
-    self.labels = glob.glob(f'{base_dir}/**/*.xml', recursive=True)
-    self.gt_pose_files = sorted(glob.glob(f'{self.base_dir}/**/*.tf'))
+    self.color_files = sorted(glob.glob(f"{self.base_dir}/*.jpg"))
+    self.depth_files = sorted(glob.glob(f"{self.base_dir}/depth_*.npy"))
+    self.camera_pose_files = sorted(glob.glob(f"{self.base_dir}/camera_pose_*.npy"))
+    self.bounding_box_files = sorted(glob.glob(f"{self.base_dir}/bounding_box_*.npy"))
+    self.labels = glob.glob(f'{base_dir}/*.xml', recursive=True)
+    self.gt_pose_files = sorted(glob.glob(f'{self.base_dir}/*.tf'))
     self.mask_dir = f"{self.base_dir}/masks"
+    self.gt_pose_beaker_250ml_files = sorted(glob.glob(f"{self.base_dir}/5.tf"))
+    self.gt_pose_conical_flask_500ml_files = sorted(glob.glob(f"{self.base_dir}/17.tf"))
+    self.gt_pose_conical_flask_250ml_files = sorted(glob.glob(f"{self.base_dir}/14.tf"))
+    self.gt_pose_beaker_30ml_files = sorted(glob.glob(f"{self.base_dir}/2.tf"))
+    self.est_pose_beaker_250ml_files = sorted(glob.glob(f"{self.base_dir}/estimated_*_pose_beaker_250ml_*.npy"))
+    self.est_pose_conical_flask_500ml_files = sorted(glob.glob(f"{self.base_dir}/estimated_*_pose_conical_flask_500ml_*.npy"))
+    self.est_pose_conical_flask_250ml_files = sorted(glob.glob(f"{self.base_dir}/estimated_*_pose_conical_flask_250ml_*.npy"))
+    self.est_pose_beaker_30ml_files = sorted(glob.glob(f"{self.base_dir}/estimated_*_pose_beaker_30ml_*.npy"))
+    self.est_pose_files = sorted(glob.glob(f"{self.base_dir}/estimated_*.npy"))
     print(self.color_files)
     # camera intrinsic matrix for the organa dataset
     self.K = np.array([[729.42260742,   0.        , 617.55908203],
@@ -61,13 +70,13 @@ class OrganaReader:
     self.H = int(self.H*self.downscale)
     self.W = int(self.W*self.downscale)
     self.K[:2] *= self.downscale
-    self.gt_pose_files = sorted(glob.glob(f'{self.base_dir}/**/**/*.tf'))
+    self.gt_pose_files = sorted(glob.glob(f'{self.base_dir}/*.tf'))
     # #
-    # self.depth_paths = sorted(glob.glob(f'{base_dir}/**/**/depth_*.npy', recursive=True))
-    # self.camera_pose_paths = sorted(glob.glob(f'{base_dir}/**/**/camera_pose_*.npy', recursive=True))
+    # self.depth_paths = sorted(glob.glob(f'{base_dir}/depth_*.npy', recursive=True))
+    # self.camera_pose_paths = sorted(glob.glob(f'{base_dir}/camera_pose_*.npy', recursive=True))
     
 
-    self.labels = glob.glob(f'{base_dir}/**/**/*.xml', recursive=True)
+    self.labels = glob.glob(f'{base_dir}/*.xml', recursive=True)
     #self.metadata = pd.read_csv(f'{base_dir}/metadata.csv')
 
   def __len__(self):
@@ -81,7 +90,7 @@ class OrganaReader:
       logging.info("GT pose not found, return None")
       return None
   def get_color(self,i):
-    print(self.color_files[i])
+    #print(self.color_files[i])
     color = imageio.imread(self.color_files[i])[...,:3]
     color = cv2.resize(color, (self.W,self.H), interpolation=cv2.INTER_NEAREST)
     return color
