@@ -11,7 +11,7 @@ from Utils import *
 import json,os,sys
 import open3d
 #from local_utils.config_utils import parse_config_utils
-from segmentation import MaskGenerator
+from segmentation2 import MaskGenerator
 
 BOP_LIST = ['lmo','tless','ycbv','hb','tudl','icbin','itodd']
 BOP_DIR = os.getenv('BOP_DIR')
@@ -33,7 +33,7 @@ class OrganaReader:
     self.camera_pose_files = sorted(glob.glob(f"{self.base_dir}/camera_pose_*.npy"))
     self.bounding_box_files = sorted(glob.glob(f"{self.base_dir}/bounding_box_*.npy"))
     self.labels = glob.glob(f'{base_dir}/*.xml', recursive=True)
-    self.gt_pose_files = sorted(glob.glob(f'{self.base_dir}/*.tf'))
+    # self.gt_pose_files = sorted(glob.glob(f'{self.base_dir}/*.tf'))
     self.mask_dir = f"{self.base_dir}/masks"
     self.gt_pose_beaker_250ml_files = sorted(glob.glob(f"{self.base_dir}/5.tf"))
     self.gt_pose_conical_flask_500ml_files = sorted(glob.glob(f"{self.base_dir}/17.tf"))
@@ -44,6 +44,7 @@ class OrganaReader:
     self.est_pose_conical_flask_250ml_files = sorted(glob.glob(f"{self.base_dir}/estimated_*_pose_conical_flask_250ml_*.npy"))
     self.est_pose_beaker_30ml_files = sorted(glob.glob(f"{self.base_dir}/estimated_*_pose_beaker_30ml_*.npy"))
     self.est_pose_files = sorted(glob.glob(f"{self.base_dir}/estimated_*.npy"))
+    self.gt_pose_files = sorted(glob.glob(f'{self.base_dir}/gt_*.npy'))
     print(self.color_files)
     # camera intrinsic matrix for the organa dataset
     self.K = np.array([[729.42260742,   0.        , 617.55908203],
@@ -70,7 +71,7 @@ class OrganaReader:
     self.H = int(self.H*self.downscale)
     self.W = int(self.W*self.downscale)
     self.K[:2] *= self.downscale
-    self.gt_pose_files = sorted(glob.glob(f'{self.base_dir}/*.tf'))
+    # self.gt_pose_files = sorted(glob.glob(f'{self.base_dir}/*.tf'))
     # #
     # self.depth_paths = sorted(glob.glob(f'{base_dir}/depth_*.npy', recursive=True))
     # self.camera_pose_paths = sorted(glob.glob(f'{base_dir}/camera_pose_*.npy', recursive=True))
@@ -96,6 +97,10 @@ class OrganaReader:
     return color
   def generate_mask(self, mesh_name, frame_id):
     mask_generator = MaskGenerator(base_dir=self.base_dir, mesh_name=mesh_name, frame_id=frame_id)
+    mask_generator.generation()
+    print("Mask generation done")
+  def generate_mask2(self, mesh_name, frame_id, checkpoint = "sam_vit_h_4b8939.pth" , model_type = "vit_h"):
+    mask_generator = MaskGenerator(base_dir=self.base_dir, mesh_name=mesh_name, frame_id=frame_id, checkpoint=checkpoint, model_type=model_type)
     mask_generator.generation()
     print("Mask generation done")
   def get_mask(self,i, mesh_name, frame_id):
