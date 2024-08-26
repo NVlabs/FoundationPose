@@ -9,4 +9,4 @@ xhost + && docker run --gpus all --env NVIDIA_DISABLE_REQUIRE=1 -it --network=ho
   --ipc=host \
   -e DISPLAY=${DISPLAY} \
   -e GIT_INDEX_FILE \
-  ros_fp_new_env:latest bash -c "cd $DIR && bash"
+  ghcr.io/shubho-upenn/ros_fp_new_env:latest bash -c "cd $DIR && bash"
