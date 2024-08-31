@@ -138,11 +138,15 @@ class TrackerRos:
 
   
 if __name__=="__main__":
+  parser = argparse.ArgumentParser(description="FoundationPose implementation in ROS")
+  parser.add_argument('-in', '--input', help='Input mesh file', default="mesh/mustard_bottle/textured_mesh.obj")
+  args = parser.parse_args()
+
   rospy.init_node('FoundationPose_Node', anonymous=True)
   code_dir = os.path.dirname(os.path.realpath(__file__))
 
   # mesh_file = "mesh/kinect_driller/textured_mesh.obj" # Hand Drill
-  mesh_file = "mesh/mustard_bottle/textured_simple.obj"  # Mustard Bottle
+  mesh_file = args.input  
   debug = 1
   debug_dir = "outputs"
 

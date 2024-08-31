@@ -58,11 +58,11 @@ python3 ros_gsam.py
 Enter the object that you want to track to enable the GroundedSAM to detect and segment the object in the image and press enter. Accurate and general inputs such as 'mustard bottle' or 'orange hand drill' (as in examples) will work well.
 
 ### 4. Run the FoundationPose ROS node
-Before running the command, place the `.obj` file of the object you want to track in the `mesh` directory. Also, correctly paste the path of this `.obj` file in the `mesh_file` variable in `run_ROS.py`. 
+Before running the command, place the `.obj` file of the object you want to track in the `mesh` directory.
 Then, in the ros_fp_new_env (FoundationPose) container, do the following to run the ROS Foundation Pose tracking:
 ```bash
 conda activate test_env
-python3 run_ROS.py
+python3 run_ROS.py -in path/to/obj/file
 ```
 You should see the object being tracked.
 
