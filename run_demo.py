@@ -18,10 +18,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--mesh_file",
         type=str,
-        default=f"{code_dir}/demo_data/metal_sheet/mesh/some_mesh.stl",
+        default=f"{code_dir}/demo_data/mustard0/mesh/textured_simple.obj",
     )
     parser.add_argument(
-        "--test_scene_dir", type=str, default=f"{code_dir}/demo_data/metal_sheet"
+        "--test_scene_dir", type=str, default=f"{code_dir}/demo_data/mustard0"
     )
     parser.add_argument("--est_refine_iter", type=int, default=5)
     parser.add_argument("--track_refine_iter", type=int, default=2)
@@ -66,6 +66,8 @@ if __name__ == "__main__":
         logging.info(f"i:{i}")
         color = reader.get_color(i)
         depth = reader.get_depth(i)
+        # For the first image, the pose is detected without tracking, after that the
+        # other result are helping to refine the result of the pose with tracking.
         if i == 0:
             mask = reader.get_mask(0).astype(bool)
             pose = est.register(
@@ -92,6 +94,7 @@ if __name__ == "__main__":
         os.makedirs(f"{debug_dir}/ob_in_cam", exist_ok=True)
         np.savetxt(f"{debug_dir}/ob_in_cam/{reader.id_strs[i]}.txt", pose.reshape(4, 4))
 
+        # If debug is set to 1 the results will be displayed on detection
         if debug >= 1:
             center_pose = pose @ np.linalg.inv(to_origin)
             vis = draw_posed_3d_box(
@@ -107,8 +110,9 @@ if __name__ == "__main__":
                 is_input_rgb=True,
             )
             cv2.imshow("1", vis[..., ::-1])
-            cv2.waitKey(1)
+            cv2.waitKey(0)
 
+        # If the debug is set to 2, the results will be save in the track vis folder
         if debug >= 2:
             os.makedirs(f"{debug_dir}/track_vis", exist_ok=True)
             imageio.imwrite(f"{debug_dir}/track_vis/{reader.id_strs[i]}.png", vis)

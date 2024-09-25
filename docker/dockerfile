@@ -1,4 +1,4 @@
-FROM nvidia/cudagl:11.3.0-devel-ubuntu20.04
+FROM nvidia/cuda:12.1.0-devel-ubuntu20.04
 
 ENV TZ=US/Pacific
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
@@ -38,7 +38,7 @@ ENV PATH $PATH:/opt/conda/envs/my/bin
 RUN conda init bash &&\
     echo "conda activate my" >> ~/.bashrc &&\
     conda activate my &&\
-    pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 torchaudio==2.0.1 --index-url https://download.pytorch.org/whl/cu118 &&\
+    pip install torchvision==0.16.0+cu121 torchaudio==2.1.0 torch==2.1.0+cu121 --index-url https://download.pytorch.org/whl/cu121 &&\
     pip install "git+https://github.com/facebookresearch/pytorch3d.git@stable" &&\
     pip install scipy joblib scikit-learn ruamel.yaml trimesh pyyaml opencv-python imageio open3d transformations warp-lang einops kornia pyrender
 
