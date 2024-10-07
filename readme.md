@@ -68,6 +68,10 @@ You should see the object being tracked.
 
 ## Acknowldegement
 This repository is based on the work and takes major components from FoundationPose developed by Bowen et. al. (NVLabs) and GroundedSAM from IDEA-Research and Meta.
+The Licence for FoundationPose can be found in ./FoundationPose_ROS/LICENCE.
+The Licence for Grounded-SAM can be found in ./Grounded-Segment-Anything/LICENCE.
+The Licence for segment-anything can be found in ./Grounded-Segment-Anything/segment_anything/LICENCE.
+The original readme.md of each of these repos can also be found in their respective aforementioned directories.
 
 Bibtex Citation for FoundationPose:
 ```bibtex
