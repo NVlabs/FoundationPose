@@ -280,7 +280,7 @@ def normalizeRotation(pose):
 def toOpen3dCloud(points,colors=None,normals=None):
   cloud = o3d.geometry.PointCloud()
   cloud.points = o3d.utility.Vector3dVector(points.astype(np.float64))
-  if colors is not None:
+  if colors is not None and colors.size > 0:  # Check if colors is not empty:
     if colors.max()>1:
       colors = colors/255.0
     cloud.colors = o3d.utility.Vector3dVector(colors.astype(np.float64))
