@@ -65,6 +65,7 @@ conda activate test_env
 python3 run_ROS.py -in path/to/obj/file
 ```
 You should see the object being tracked.
+ROS Topics are created for the object you are tracking.
 
 ## Acknowldegement
 This repository is based on the work and takes major components from FoundationPose developed by Bowen et. al. (NVLabs) and GroundedSAM from IDEA-Research and Meta.
