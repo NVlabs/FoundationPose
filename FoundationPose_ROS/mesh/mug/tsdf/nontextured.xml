@@ -1,0 +1,8 @@
+<KinBody name="025_cup">
+  <Body type="static" name="025_cup">
+    <Geom type="trimesh">
+      <Render>./nontextured.stl</Render>
+      <Data>./nontextured.stl</Data>
+    </Geom>
+  </Body>
+</KinBody>
