@@ -1,0 +1,5 @@
+# ninja log v5
+0	19355	1717606098904099100	/home/shubhodeep/Figueroa_Lab/Foundation_Pose/FoundationPose/bundlesdf/mycuda/build/temp.linux-x86_64-cpython-38/bindings.o	c45a0e0392988c7c
+0	43728	1717606123284114914	/home/shubhodeep/Figueroa_Lab/Foundation_Pose/FoundationPose/bundlesdf/mycuda/build/temp.linux-x86_64-cpython-38/common.o	609ffa27f9e26a4e
+2	19532	1717606143228126221	/home/shubhodeep/Figueroa_Lab/Foundation_Pose/FoundationPose/bundlesdf/mycuda/build/temp.linux-x86_64-cpython-38/home/shubhodeep/Figueroa_Lab/Foundation_Pose/FoundationPose/bundlesdf/mycuda/torch_ngp_grid_encoder/bindings.o	1b38b18bc6c45b52
+2	93048	1717606216744158515	/home/shubhodeep/Figueroa_Lab/Foundation_Pose/FoundationPose/bundlesdf/mycuda/build/temp.linux-x86_64-cpython-38/home/shubhodeep/Figueroa_Lab/Foundation_Pose/FoundationPose/bundlesdf/mycuda/torch_ngp_grid_encoder/gridencoder.o	848beea3ff82f97f

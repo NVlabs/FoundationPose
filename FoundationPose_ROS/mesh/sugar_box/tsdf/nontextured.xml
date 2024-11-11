@@ -1,0 +1,8 @@
+<KinBody name="004_sugar_box">
+  <Body type="static" name="004_sugar_box">
+    <Geom type="trimesh">
+      <Render>./nontextured.stl</Render>
+      <Data>./nontextured.stl</Data>
+    </Geom>
+  </Body>
+</KinBody>

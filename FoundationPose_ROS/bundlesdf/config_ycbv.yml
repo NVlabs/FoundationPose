@@ -1,0 +1,105 @@
+notes: ''
+n_step: 1000
+netdepth: 8
+netwidth: 256
+netdepth_fine: 8
+netwidth_fine: 256
+N_rand: 2048          # Batch number of rays
+first_frame_ray_in_batch: 0
+lrate: 0.01
+lrate_pose: 0.01
+pose_optimize_start: 0
+decay_rate: 0.1
+chunk: 99999999999
+netchunk: 6553600
+no_batching: 0
+amp: true
+
+N_samples: 128     #number of coarse samples per ray
+N_samples_around_depth: 128
+N_importance: 0
+N_importance_iter: 1
+perturb: 1
+use_viewdirs: 1
+i_embed: 1      #set 1 for hashed embedding, 0 for default positional encoding, 2 for spherical; 3 for octree grid
+i_embed_views: 2   #set 1 for hashed embedding, 0 for default positional encoding, 2 for spherical
+multires: 8     #log2 of max freq for positional encoding (3D location)
+multires_views: 3    #log2 of max freq for positional encoding (2D direction)
+feature_grid_dim: 2
+raw_noise_std: 0
+white_bkgd: 0
+gradient_max_norm: 0.1
+gradient_pose_max_norm: 0.1
+
+# logging/saving options
+i_print: 500
+i_img: 500
+i_weights: 500
+i_mesh: 500
+i_nerf_normals: 500
+i_save_ray: 500
+i_pose: 500
+save_octree_clouds: True
+
+finest_res: 512
+base_res: 32
+num_levels: 16
+log2_hashmap_size: 22
+datadir: /mnt/9a72c439-d0a7-45e8-8d20-d7a235d02763/github/HashNeRF-pytorch/data/bundlesdf_bundlesdf_e03000196
+n_train_image: 300
+use_octree: 1
+first_frame_weight: 1
+denoise_depth_use_octree_cloud: true
+octree_embed_base_voxel_size: 0.02
+octree_smallest_voxel_size: 0.02        # This determines the smallest feature vox size
+octree_raytracing_voxel_size: 0.02
+octree_dilate_size: 0.02           # meters
+down_scale_ratio: 1
+bounding_box: [[-1,-1,-1], [1,1,1]]
+farthest_pose_sampling: 0    # Sampling train images. This replace uniform skip
+use_mask: 1
+dilate_mask_size: 0
+rays_valid_depth_only: true
+near: 0.1
+far: 2
+rgb_weight: 100
+depth_weight: 0
+trunc: 0.01   #length of the truncation region in meters
+trunc_start: 0.01
+sdf_lambda: 5
+neg_trunc_ratio: 1      # -trunc distance ratio compared to +trunc
+trunc_decay_type: ''
+sdf_loss_type: l2
+fs_weight: 100
+empty_weight: 1
+fs_rgb_weight: 0
+trunc_weight: 6000
+sparse_loss_weight: 0
+tv_loss_weight: 0
+frame_features: 2    #number of channels of the learnable per-frame features
+optimize_poses: 1   #optimize a pose refinement for the initial poses
+pose_reg_weight: 0
+point_cloud_loss_weight: 0
+point_cloud_loss_normal_weight: 0
+eikonal_weight: 0
+normal_loss_weight: 0
+feature_reg_weight: 0.1
+deformation_reg_weight: 0
+use_deformation_field: 0    #use a deformation field to account for inaccuracies in intrinsic parameters
+max_pix_shift: 0.02    # Pixel shift ratio relative to image size
+share_coarse_fine: 1
+mode: sdf
+fs_sdf: 1   # Uncertain free space
+crop: 0
+mesh_resolution: 0.003
+max_trans: 0.02         # meters
+max_rot: 10         # deg
+
+continual: True
+
+######### dbscan
+dbscan_eps: 0.01
+dbscan_eps_min_samples: 1
+
+####### bundlenerf
+sync_max_delay: 0   # 0 for strict sync

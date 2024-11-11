@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -std=c++14 -fopenmp -g3 -O3 -O3 -DNDEBUG -flto -shared  -o mycpp.cpython-38-x86_64-linux-gnu.so CMakeFiles/mycpp.dir/src/app/pybind_api.cpp.o CMakeFiles/mycpp.dir/src/Utils.cpp.o  /usr/lib/x86_64-linux-gnu/libboost_system.so.1.71.0 /usr/lib/x86_64-linux-gnu/libboost_program_options.so.1.71.0 -fopenmp 
