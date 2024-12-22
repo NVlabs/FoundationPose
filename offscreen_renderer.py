@@ -38,7 +38,7 @@ class ModelRendererOffscreen:
     '''
     self.K = cam_K
     self.scene = pyrender.Scene(ambient_light=[1., 1., 1.],bg_color=[0,0,0])
-    self.camera = pyrender.IntrinsicsCamera(fx=cam_K[0,0],fy=cam_K[1,1],cx=cam_K[0,2],cy=cam_K[1,2],znear=0.1,zfar=zfar)
+    self.camera = pyrender.IntrinsicsCamera(fx=cam_K[0,0],fy=cam_K[1,1],cx=cam_K[0,2],cy=cam_K[1,2],znear=0.001,zfar=zfar)
     self.cam_node = self.scene.add(self.camera, pose=np.eye(4), name='cam')
     self.mesh_nodes = []
 

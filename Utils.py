@@ -158,7 +158,7 @@ def nvdiffrast_render(K=None, H=None, W=None, ob_in_cams=None, glctx=None, conte
 
   ob_in_glcams = torch.tensor(glcam_in_cvcam, device='cuda', dtype=torch.float)[None]@ob_in_cams
   if projection_mat is None:
-    projection_mat = projection_matrix_from_intrinsics(K, height=H, width=W, znear=0.1, zfar=100)
+    projection_mat = projection_matrix_from_intrinsics(K, height=H, width=W, znear=0.001, zfar=100)
   projection_mat = torch.as_tensor(projection_mat.reshape(-1,4,4), device='cuda', dtype=torch.float)
   mtx = projection_mat@ob_in_glcams
 
@@ -318,7 +318,7 @@ if wp is not None:
         if v<0 or v>=H:
           continue
         cur_depth = depth[v,u]
-        if cur_depth>=0.1 and cur_depth<zfar:
+        if cur_depth>=0.001 and cur_depth<zfar:
           num_valid += 1
           mean_depth += cur_depth
     if num_valid==0:
@@ -335,7 +335,7 @@ if wp is not None:
         if v<0 or v>=H:
           continue
         cur_depth = depth[v,u]
-        if cur_depth>=0.1 and cur_depth<zfar and abs(cur_depth-mean_depth)<0.01:
+        if cur_depth>=0.001 and cur_depth<zfar and abs(cur_depth-mean_depth)<0.01:
           weight = wp.exp( -float((u-w)*(u-w) + (h-v)*(h-v)) / (2.0*sigmaD*sigmaD) - (depthCenter-cur_depth)*(depthCenter-cur_depth)/(2.0*sigmaR*sigmaR) )
           sum_weight += weight
           sum += weight*cur_depth
@@ -364,7 +364,7 @@ if wp is not None:
     if w>=W or h>=H:
       return
     d_ori = depth[h,w]
-    if d_ori<0.1 or d_ori>=zfar:
+    if d_ori<0.001 or d_ori>=zfar:
       out[h,w] = 0.0
     bad_cnt = float(0)
     total = float(0)
@@ -376,7 +376,7 @@ if wp is not None:
           continue
         cur_depth = depth[v,u]
         total += 1.0
-        if cur_depth<0.1 or cur_depth>=zfar or abs(cur_depth-d_ori)>depth_diff_thres:
+        if cur_depth<0.001 or cur_depth>=zfar or abs(cur_depth-d_ori)>depth_diff_thres:
           bad_cnt += 1.0
     if bad_cnt/total>ratio_thres:
       out[h,w] = 0.0
@@ -397,7 +397,7 @@ if wp is not None:
 
 
 def depth2xyzmap(depth, K, uvs=None):
-  invalid_mask = (depth<0.1)
+  invalid_mask = (depth<0.001)
   H,W = depth.shape[:2]
   if uvs is None:
     vs,us = np.meshgrid(np.arange(0,H),np.arange(0,W), sparse=False, indexing='ij')
@@ -423,7 +423,7 @@ def depth2xyzmap_batch(depths, Ks, zfar):
   @Ks: torch tensor (B,3,3)
   '''
   bs = depths.shape[0]
-  invalid_mask = (depths<0.1) | (depths>zfar)
+  invalid_mask = (depths<0.001) | (depths>zfar)
   H,W = depths.shape[-2:]
   vs,us = torch.meshgrid(torch.arange(0,H),torch.arange(0,W), indexing='ij')
   vs = vs.reshape(-1).float().cuda()[None].expand(bs,-1)
@@ -460,7 +460,7 @@ def depth_to_vis(depth, zmin=None, zmax=None, mode='rgb', inverse=True):
     zmax = depth.max()
 
   if inverse:
-    invalid = depth<0.1
+    invalid = depth<0.001
     vis = zmin/(depth+1e-8)
     vis[invalid] = 0
   else:

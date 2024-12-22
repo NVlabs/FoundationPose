@@ -8,8 +8,9 @@ Contributors: Bowen Wen, Wei Yang, Jan Kautz, Stan Birchfield
 We present FoundationPose, a unified foundation model for 6D object pose estimation and tracking, supporting both model-based and model-free setups. Our approach can be instantly applied at test-time to a novel object without fine-tuning, as long as its CAD model is given, or a small number of reference images are captured. We bridge the gap between these two setups with a neural implicit representation that allows for effective novel view synthesis, keeping the downstream pose estimation modules invariant under the same unified framework. Strong generalizability is achieved via large-scale synthetic training, aided by a large language model (LLM), a novel transformer-based architecture, and contrastive learning formulation. Extensive evaluation on multiple public datasets involving challenging scenarios and objects indicate our unified approach outperforms existing methods specialized for each task by a large margin. In addition, it even achieves comparable results to instance-level methods despite the reduced assumptions.
 
 
-
 <img src="assets/intro.jpg" width="70%">
+
+**🤖 For ROS version, please check [Isaac ROS Pose Estimation](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_pose_estimation), which enjoys TRT fast inference and C++ speed up.**
 
 \
 **🥇 No. 1 on the world-wide [BOP leaderboard](https://bop.felk.cvut.cz/leaderboards/pose-estimation-unseen-bop23/core-datasets/) (as of 2024/03) for model-based novel object pose estimation.**
@@ -57,7 +58,7 @@ year          = {2023},
 # Data prepare
 
 
-1) Download all network weights from [here](https://drive.google.com/drive/folders/1DFezOAD0oD1BblsXVxqDsl8fj0qzB82i?usp=sharing) and put them under the folder `weights/`
+1) Download all network weights from [here](https://drive.google.com/drive/folders/1DFezOAD0oD1BblsXVxqDsl8fj0qzB82i?usp=sharing) and put them under the folder `weights/`. For the refiner, you will need `2023-10-28-18-33-37`. For scorer, you will need `2024-01-11-20-02-45`.
 
 1) [Download demo data](https://drive.google.com/drive/folders/1pRyFmxYXmAnpku7nGRioZaKrVJtIsroP?usp=sharing) and extract them under the folder `demo_data/`
 
@@ -82,12 +83,14 @@ Later you can execute into the container without re-build.
 ```
 docker exec -it foundationpose bash
 ```
+
 For more recent GPU such as 4090, refer to [this](https://github.com/NVlabs/FoundationPose/issues/27).
 In short, do the following:
 ```
 docker pull shingarey/foundationpose_custom_cuda121:latest
 ```
 Then modify the bash script to use this image instead of `foundationpose:latest`.
+
 
 # Env setup option 2: conda (experimental)
 
@@ -144,7 +147,7 @@ To run model-based version on these two datasets respectively, set the paths bas
 ```
 python run_linemod.py --linemod_dir /mnt/9a72c439-d0a7-45e8-8d20-d7a235d02763/DATASET/LINEMOD --use_reconstructed_mesh 0
 
-python run_ycb_video.py --ycbv_dir /mnt/9a72c439-d0a7-45e8-8d20-d7a235d02763/DATASET/YCB-Video --use_reconstructed_mesh 0
+python run_ycb_video.py --ycbv_dir /mnt/9a72c439-d0a7-45e8-8d20-d7a235d02763/DATASET/YCB_Video --use_reconstructed_mesh 0
 ```
 
 To run model-free few-shot version. You first need to train Neural Object Field. `ref_view_dir` is based on where you download in the above "Data prepare" section. Set the `dataset` flag to your interested dataset.
@@ -154,15 +157,46 @@ python bundlesdf/run_nerf.py --ref_view_dir /mnt/9a72c439-d0a7-45e8-8d20-d7a235d
 
 Then run the similar command as the model-based version with some small modifications. Here we are using YCB-Video as example:
 ```
-python run_ycb_video.py --ycbv_dir /mnt/9a72c439-d0a7-45e8-8d20-d7a235d02763/DATASET/YCB-Video --use_reconstructed_mesh 1 --ref_view_dir /mnt/9a72c439-d0a7-45e8-8d20-d7a235d02763/DATASET/YCB_Video/bowen_addon/ref_views_16
+python run_ycb_video.py --ycbv_dir /mnt/9a72c439-d0a7-45e8-8d20-d7a235d02763/DATASET/YCB_Video --use_reconstructed_mesh 1 --ref_view_dir /mnt/9a72c439-d0a7-45e8-8d20-d7a235d02763/DATASET/YCB_Video/bowen_addon/ref_views_16
 ```
 
+# Troubleshooting
 
+
+- For more recent GPU such as 4090, refer to [this](https://github.com/NVlabs/FoundationPose/issues/27).
+
+- For setting up on Windows, refer to [this](https://github.com/NVlabs/FoundationPose/issues/148).
+
+- If you are getting unreasonable results, check [this](https://github.com/NVlabs/FoundationPose/issues/44#issuecomment-2048141043)
 
 # Training data download
-Our training data include scenes using 3D assets from GSO and Objaverse, rendered with high quality photo-realism and large domain randomization. Each data point includes **RGB, depth, object pose, camera pose, instance segmentation, 2D bounding box**. [[Google Drive]](https://drive.google.com/drive/folders/1s4pB6p4ApfWMiMjmTXOFco8dHbNXikp-?usp=sharing)
+Our training data include scenes using 3D assets from GSO and Objaverse, rendered with high quality photo-realism and large domain randomization. Each data point includes **RGB, depth, object pose, camera pose, instance segmentation, 2D bounding box**. [[Google Drive]](https://drive.google.com/drive/folders/1s4pB6p4ApfWMiMjmTXOFco8dHbNXikp-?usp=sharing).
 
 <img src="assets/train_data_vis.png" width="80%">
+
+- To parse the camera params including extrinsics and intrinsics
+  ```
+  with open(f'{base_dir}/camera_params/camera_params_000000.json','r') as ff:
+    camera_params = json.load(ff)
+  world_in_glcam = np.array(camera_params['cameraViewTransform']).reshape(4,4).T
+  cam_in_world = np.linalg.inv(world_in_glcam)@glcam_in_cvcam
+  world_in_cam = np.linalg.inv(cam_in_world)
+  focal_length = camera_params["cameraFocalLength"]
+  horiz_aperture = camera_params["cameraAperture"][0]
+  vert_aperture = H / W * horiz_aperture
+  focal_y = H * focal_length / vert_aperture
+  focal_x = W * focal_length / horiz_aperture
+  center_y = H * 0.5
+  center_x = W * 0.5
+
+  fx, fy, cx, cy = focal_x, focal_y, center_x, center_y
+  K = np.eye(3)
+  K[0,0] = fx
+  K[1,1] = fy
+  K[0,2] = cx
+  K[1,2] = cy
+  ```
+
 
 
 # Notes

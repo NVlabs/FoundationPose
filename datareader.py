@@ -122,7 +122,7 @@ class YcbineoatReader:
   def get_depth(self,i):
     depth = cv2.imread(self.color_files[i].replace('rgb','depth'),-1)/1e3
     depth = cv2.resize(depth, (self.W,self.H), interpolation=cv2.INTER_NEAREST)
-    depth[(depth<0.1) | (depth>=self.zfar)] = 0
+    depth[(depth<0.001) | (depth>=self.zfar)] = 0
     return depth
 
 
@@ -253,7 +253,7 @@ class BopBaseReader:
       depth = cv2.imread(depth_file,-1)*1e-3*self.bop_depth_scale
     if self.resize!=1:
       depth = cv2.resize(depth, fx=self.resize, fy=self.resize, dsize=None, interpolation=cv2.INTER_NEAREST)
-    depth[depth<0.1] = 0
+    depth[depth<0.001] = 0
     depth[depth>self.zfar] = 0
     return depth
 
