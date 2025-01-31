@@ -176,6 +176,10 @@ Our training data include scenes using 3D assets from GSO and Objaverse, rendere
 
 - To parse the camera params including extrinsics and intrinsics
   ```
+  glcam_in_cvcam = np.array([[1,0,0,0],
+                          [0,-1,0,0],
+                          [0,0,-1,0],
+                          [0,0,0,1]]).astype(float)
   with open(f'{base_dir}/camera_params/camera_params_000000.json','r') as ff:
     camera_params = json.load(ff)
   world_in_glcam = np.array(camera_params['cameraViewTransform']).reshape(4,4).T
