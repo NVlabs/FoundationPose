@@ -1,0 +1,39 @@
+{
+    "name": "FoundationPose Development Container",
+    "image": "wenbowen123/foundationpose:latest",
+    "hostRequirements": {
+        "gpu": true
+    },
+    "runArgs": [
+        "--gpus=all",
+        "--env=NVIDIA_DISABLE_REQUIRE=1",
+        "--network=host",
+        "--cap-add=SYS_PTRACE",
+        "--security-opt=seccomp=unconfined",
+        "--ipc=host"
+    ],
+    "mounts": [
+        "source=/home,target=/home,type=bind",
+        "source=/mnt,target=/mnt,type=bind",
+        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind",
+        "source=/tmp,target=/tmp,type=bind"
+    ],
+    "containerEnv": {
+        "DISPLAY": "${localEnv:DISPLAY}",
+        "GIT_INDEX_FILE": "${localEnv:GIT_INDEX_FILE}"
+    },
+    "workspaceFolder": "${localWorkspaceFolder}",
+    "workspaceMount": "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind",
+    "postCreateCommand": "cd ${containerWorkspaceFolder}",
+    "remoteUser": "root",
+    "features": {},
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.flake8",
+                "ms-python.pylint"
+            ]
+        }
+    }
+} 

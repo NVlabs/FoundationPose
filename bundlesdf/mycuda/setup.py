@@ -15,8 +15,8 @@ from torch.utils.cpp_extension import load
 code_dir = os.path.dirname(os.path.realpath(__file__))
 
 
-nvcc_flags = ['-Xcompiler', '-O3', '-std=c++14', '-U__CUDA_NO_HALF_OPERATORS__', '-U__CUDA_NO_HALF_CONVERSIONS__', '-U__CUDA_NO_HALF2_OPERATORS__']
-c_flags = ['-O3', '-std=c++14']
+nvcc_flags = ['-Xcompiler', '-O3', '-std=c++17', '-U__CUDA_NO_HALF_OPERATORS__', '-U__CUDA_NO_HALF_CONVERSIONS__', '-U__CUDA_NO_HALF2_OPERATORS__']
+c_flags = ['-O3', '-std=c++17']
 
 setup(
     name='common',

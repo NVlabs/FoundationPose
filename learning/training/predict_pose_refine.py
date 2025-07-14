@@ -19,8 +19,10 @@ from learning.models.refine_network import RefineNet
 from learning.datasets.h5_dataset import *
 from Utils import *
 from datareader import *
-
-
+import onnxruntime as ort
+import tensorrt as trt
+from onnx_tensorrt import tensorrt_engine
+from .tensorrt_infer import TensorRTInfer
 
 @torch.inference_mode()
 def make_crop_data_batch(render_size, ob_in_cams, mesh, rgb, depth, K, crop_ratio, xyz_map, normal_map=None, mesh_diameter=None, cfg=None, glctx=None, mesh_tensors=None, dataset:PoseRefinePairH5Dataset=None):
@@ -91,7 +93,7 @@ def make_crop_data_batch(render_size, ob_in_cams, mesh, rgb, depth, K, crop_rati
 
 
 class PoseRefinePredictor:
-  def __init__(self,):
+  def __init__(self, runtime='torch', context=None, verbose=False):
     logging.info("welcome")
     self.amp = True
     self.run_name = "2023-10-28-18-33-37"
@@ -100,9 +102,31 @@ class PoseRefinePredictor:
     ckpt_dir = f'{code_dir}/../../weights/{self.run_name}/{model_name}'
 
     self.cfg = OmegaConf.load(f'{code_dir}/../../weights/{self.run_name}/config.yml')
-
     self.cfg['ckpt_dir'] = ckpt_dir
     self.cfg['enable_amp'] = True
+
+    self.runtime = runtime
+    self.verbose = verbose
+    if self.runtime == 'onnx':
+      self.onnx_path = f'{code_dir}/../../weights/{self.run_name}/model_best.onnx'
+      self.onnx_session = None
+      self.load_onnx_model()
+    elif self.runtime == 'tensorrt':
+      self.engine_path = f'{code_dir}/../../weights/{self.run_name}/model_best.plan'
+      with open(self.engine_path, "rb") as f, trt.Runtime(trt.Logger(trt.Logger.ERROR)) as runtime:
+          self.engine = runtime.deserialize_cuda_engine(f.read())
+      self.onnx_session = None
+    else:
+      self.model = RefineNet(cfg=self.cfg, c_in=self.cfg['c_in']).cuda()
+      logging.info(f"Using pretrained model from {ckpt_dir}")
+      ckpt = torch.load(ckpt_dir)
+      if 'model' in ckpt:
+        ckpt = ckpt['model']
+      self.model.load_state_dict(ckpt)
+      self.model.cuda().eval()
+      self.onnx_path = None
+      self.onnx_session = None
+
 
     ########## Defaults, to be backward compatible
     if 'use_normal' not in self.cfg:
@@ -132,19 +156,39 @@ class PoseRefinePredictor:
     logging.info(f"self.cfg: \n {OmegaConf.to_yaml(self.cfg)}")
 
     self.dataset = PoseRefinePairH5Dataset(cfg=self.cfg, h5_file='', mode='test')
-    self.model = RefineNet(cfg=self.cfg, c_in=self.cfg['c_in']).cuda()
+    
 
-    logging.info(f"Using pretrained model from {ckpt_dir}")
-    ckpt = torch.load(ckpt_dir)
-    if 'model' in ckpt:
-      ckpt = ckpt['model']
-    self.model.load_state_dict(ckpt)
-
-    self.model.cuda().eval()
     logging.info("init done")
     self.last_trans_update = None
     self.last_rot_update = None
 
+  def load_onnx_model(self):
+    """Load ONNX model and switch to ONNX inference mode."""
+    if not os.path.exists(self.onnx_path):
+      logging.info(f"Converting PyTorch model to ONNX format at {self.onnx_path}")
+      dummy_A = torch.ones((1, 6, 160, 160)).to('cuda')
+      dummy_B = torch.ones((1, 6, 160, 160)).to('cuda')
+      torch.onnx.export(
+          self.model, 
+          (dummy_A, dummy_B),
+          self.onnx_path,
+          input_names=['input1', 'input2'],
+          output_names=['output1', 'output2'],
+          export_params=True,
+          opset_version=17,
+          do_constant_folding=True,
+          dynamic_axes={
+              'input1': {0: 'batch_size'},
+              'input2': {0: 'batch_size'},
+              'output1': {0: 'batch_size'},
+              'output2': {0: 'batch_size'}
+          }
+      )
+    
+    logging.info(f"Loading ONNX model from {self.onnx_path}")
+    self.onnx_session = ort.InferenceSession(self.onnx_path, providers=['CUDAExecutionProvider'])
+    self.use_onnx = True
+    logging.info("PoseRefinePredictor ONNX model loaded successfully")
 
   @torch.inference_mode()
   def predict(self, rgb, depth, K, ob_in_cams, xyz_map, normal_map=None, get_vis=False, mesh=None, mesh_tensors=None, glctx=None, mesh_diameter=None, iteration=5):
@@ -168,7 +212,6 @@ class PoseRefinePredictor:
 
     B_in_cams = torch.as_tensor(ob_centered_in_cams, device='cuda', dtype=torch.float)
 
-
     if mesh_tensors is None:
       mesh_tensors = make_mesh_tensors(mesh_centered)
 
@@ -187,11 +230,41 @@ class PoseRefinePredictor:
         A = torch.cat([pose_data.rgbAs[b:b+bs].cuda(), pose_data.xyz_mapAs[b:b+bs].cuda()], dim=1).float()
         B = torch.cat([pose_data.rgbBs[b:b+bs].cuda(), pose_data.xyz_mapBs[b:b+bs].cuda()], dim=1).float()
         logging.info("forward start")
-        with torch.cuda.amp.autocast(enabled=self.amp):
-          output = self.model(A,B)
+        
+        if self.runtime == 'onnx':
+          logging.info("PoseRefinePredictor using onnx")
+          # Convert inputs to the correct format for ONNX
+          A = A.permute(0, 2, 3, 1).contiguous()  # NCHW -> NHWC
+          B = B.permute(0, 2, 3, 1).contiguous()  # NCHW -> NHWC
+          
+          # Run ONNX inference
+          onnx_inputs = {
+            'input1': A.cpu().numpy(),
+            'input2': B.cpu().numpy()
+          }
+          onnx_outputs = self.onnx_session.run(None, onnx_inputs)
+          output = {
+            'trans': torch.from_numpy(onnx_outputs[0]).cuda(),
+            'rot': torch.from_numpy(onnx_outputs[1]).cuda()
+          }
+
+        elif self.runtime == 'tensorrt':
+          logging.info("PoseRefinePredictor using tensorrt")
+          A = A.permute(0, 2, 3, 1).contiguous()  # NCHW -> NHWC
+          B = B.permute(0, 2, 3, 1).contiguous()  # NCHW -> NHWC
+
+          # engine=self.engine, 
+          self.trt_infer = TensorRTInfer(engine_path=self.engine_path, batch_size=252, verbose=self.verbose)
+          output = self.trt_infer.infer([A, B], glctx=glctx)
+
+        else:
+          with torch.cuda.amp.autocast(enabled=self.amp):
+            output = self.model(A, B)
+      
         for k in output:
           output[k] = output[k].float()
         logging.info("forward done")
+        
         if self.cfg['trans_rep']=='tracknet':
           if not self.cfg['normalize_xyz']:
             trans_delta = torch.tanh(output["trans"])*trans_normalizer
@@ -293,4 +366,3 @@ class PoseRefinePredictor:
       return B_in_cams_out, canvas
 
     return B_in_cams_out, None
-
