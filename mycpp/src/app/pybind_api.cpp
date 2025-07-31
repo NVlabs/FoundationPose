@@ -23,7 +23,7 @@ namespace py = pybind11;
 //@dist_diff: unit is meter
 vectorMatrix4f cluster_poses(float angle_diff, float dist_diff, const vectorMatrix4f &poses_in, const vectorMatrix4f &symmetry_tfs)
 {
-  printf("num original candidates = %d\n",poses_in.size());
+  printf("num original candidates = %zu\n",poses_in.size());
   vectorMatrix4f poses_out;
   poses_out.push_back(poses_in[0]);
 
@@ -63,7 +63,7 @@ vectorMatrix4f cluster_poses(float angle_diff, float dist_diff, const vectorMatr
     }
   }
 
-  printf("num of pose after clustering: %d\n",poses_out.size());
+  printf("num of pose after clustering: %zu\n",poses_out.size());
   return poses_out;
 }
 

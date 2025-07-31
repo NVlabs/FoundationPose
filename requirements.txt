@@ -1,10 +1,8 @@
-# PyTorch 2.1.1
---extra-index-url https://download.pytorch.org/whl/cu118
-# torch==2.1.1+cu118
-# torchvision==0.16.1+cu118
-torch==2.0.0+cu118
-torchvision==0.15.1+cu118
-torchaudio==2.0.1+cu118
+# PyTorch 2.7 for RTX 5080 CUDA 12.8 compatibility
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch==2.7.1+cu128
+torchaudio==2.7.1+cu128
+torchvision==0.22.1+cu128
 
 
 # JupyterLab

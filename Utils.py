@@ -43,7 +43,7 @@ try:
 except:
   kornia = None
 try:
-  import mycpp.build.mycpp as mycpp
+  import mycpp
 except:
   mycpp = None
 try:

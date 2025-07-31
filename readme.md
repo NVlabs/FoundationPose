@@ -123,6 +123,38 @@ python -m pip install --quiet --no-index --no-cache-dir pytorch3d -f https://dl.
 CMAKE_PREFIX_PATH=$CONDA_PREFIX/lib/python3.9/site-packages/pybind11/share/cmake/pybind11 bash build_all_conda.sh
 ```
 
+## Env setup for RTX 50 series GPU
+Due to the `sm_120` architecture, Pytorch binaries only support Cuda `12.8+` and PyTorch `2.7.0+` (see [here](https://discuss.pytorch.org/t/pytorch-support-for-sm120/216099)). Therefore, the provided Docker images (including the one for RTX 40 series) won't work. Until a Docker image is provided, it is still possible to set up FoundationPose using the Conda instructions on Python `3.9`. The main tricks are:
+
+1. Make sure Cuda 12.8 is installed.
+1. PyTorch3D does not currently have a prebuilt binary for `sm_120`([GitHub issue](https://github.com/facebookresearch/pytorch3d/issues/1970)). Just [install it from source](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md#building--installing-from-source) manually.
+1. There may be build failures in the "Build extensions" step. See the troubleshooting section.
+
+### Troubleshooting
+- If the following occurs, there is a mismatch between PyTorch / Cuda /GPU version. Note that it is *possible* to install Cuda 12.0~12.7 on a RTX50 series card and then install some earlier Pytorch binaries, it will just throw the error below upon running. Install Cuda `12.8+` and PyTorch `2.7.0+` to fix this.
+```
+RuntimeError: CUDA error: no kernel image is available for execution on the device
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+```
+
+- An error message like this indicates a problem with PyTorch. See [this issue](https://github.com/facebookresearch/pytorch3d/issues/1315). This can be fixed by installing from source.
+```
+".../python3.9/site-packages/pytorch3d/renderer/blending.py", line 12, in <module>
+    from pytorch3d import _C
+ImportError: .../python3.9/site-packages/pytorch3d/_C.cpython-39-x86_64-linux-gnu.so: undefined symbol: _ZN3c105ErrorC2ENS_14SourceLocationESs
+```
+
+- As suggested by [this issue](https://github.com/NVlabs/FoundationPose/issues/288), the following error from running `python run_demo.py` suggests a build issue in `mycpp`. Run the commands in `build_all_conda.sh` manually and make sure `mycpp` is built correctly.
+```
+    rot_grid = mycpp.cluster_poses(30, 99999, rot_grid, self.symmetry_tfs.data.cpu().numpy())
+AttributeError: 'NoneType' object has no attribute 'cluster_poses'
+```
+
+- This error from building `mycuda` occurs specifically on RTX50 series cards due to using deprecated API. The fix is to modify `bundlesdf/mycuda/common.cu` to use the new API. This is included in commit `25fe3b`.
+```
+.../FoundationPose/bundlesdf/mycuda/common.cu", static_cast<uint32_t>(268), (::c10::detail::torchCheckMsgImpl( "Expected " "false" " to be true, but got false.  " "(Could this error message be improved?  If so, " "please report an enhancement request to PyTorch.)", '"', at_dispatch_name, "\" not implemented for '", toString(_st), "'"))); }; } }()
+```
 
 # Run model-based demo
 The paths have been set in argparse by default. If you need to change the scene, you can pass the args accordingly. By running on the demo data, you should be able to see the robot manipulating the mustard bottle. Pose estimation is conducted on the first frame, then it automatically switches to tracking mode for the rest of the video. The resulting visualizations will be saved to the `debug_dir` specified in the argparse. (Note the first time running could be slower due to online compilation)
