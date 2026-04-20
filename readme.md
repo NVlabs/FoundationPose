@@ -92,36 +92,40 @@ docker pull shingarey/foundationpose_custom_cuda121:latest
 Then modify the bash script to use this image instead of `foundationpose:latest`.
 
 
-# Env setup option 2: conda (experimental)
+# Env setup option 2: conda (local)
 
-- Setup conda environment
+1) **Create the environment** (C++ build deps + Python; all on `conda-forge`):
 
 ```bash
-# create conda environment
-conda create -n foundationpose python=3.9
-
-# activate conda environment
+conda env create -f environment.yml
 conda activate foundationpose
-
-# Install Eigen3 3.4.0 under conda environment
-conda install conda-forge::eigen=3.4.0
-export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH:/eigen/path/under/conda"
-
-# install dependencies
-python -m pip install -r requirements.txt
-
-# Install NVDiffRast
-python -m pip install --quiet --no-cache-dir git+https://github.com/NVlabs/nvdiffrast.git
-
-# Kaolin (Optional, needed if running model-free setup)
-python -m pip install --quiet --no-cache-dir kaolin==0.15.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.0.0_cu118.html
-
-# PyTorch3D
-python -m pip install --quiet --no-index --no-cache-dir pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py39_cu118_pyt200/download.html
-
-# Build extensions
-CMAKE_PREFIX_PATH=$CONDA_PREFIX/lib/python3.9/site-packages/pybind11/share/cmake/pybind11 bash build_all_conda.sh
 ```
+
+2) **Install PyTorch** with a CUDA build that matches your machine. The [PyTorch “Get Started”](https://pytorch.org/get-started/locally/) page lists the right `--index-url` (for example `cu124` works on most current NVIDIA drivers). Example:
+
+```bash
+python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+```
+
+3) **Install PyTorch3D and NVDiffRast** (compile from source; needs the CUDA toolkit for `nvcc`. Point `CUDA_HOME` at your install, e.g. `/usr/local/cuda-12.8` or `/usr/local/cuda`):
+
+```bash
+export CUDA_HOME=/usr/local/cuda   # or e.g. /usr/local/cuda-12.8
+export PATH="$CUDA_HOME/bin:$PATH"
+python -m pip install --no-build-isolation "git+https://github.com/facebookresearch/pytorch3d.git"
+python -m pip install --no-build-isolation "git+https://github.com/NVlabs/nvdiffrast.git"
+```
+
+`--no-build-isolation` is required so the build can see the `torch` you already installed.
+
+4) **Install remaining Python dependencies** and **build the `mycpp` extension** (BundleSDF’s `mycuda` step is optional; skip it unless you need the model-free / NeRF path):
+
+```bash
+python -m pip install -r requirements.txt
+bash build_all_conda.sh
+```
+
+5) **Optional — Kaolin** (only for the model-free setup; version must match your PyTorch/CUDA—see the [Kaolin install docs](https://kaolin.readthedocs.io/en/latest/notes/installation.html)).
 
 
 # Run model-based demo

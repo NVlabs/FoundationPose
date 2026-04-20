@@ -1,0 +1,17 @@
+# Conda-only dependencies (compilers, CMake, Eigen, Boost, pybind11).
+# After creating the env, install PyTorch and GPU extensions as described in readme.md
+# (PyTorch index URL may need to match your CUDA driver), then:
+#   pip install -r requirements.txt
+#   bash build_all_conda.sh
+name: foundationpose
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - cmake
+  - ninja
+  - eigen
+  - boost-cpp
+  - pybind11
+  - cxx-compiler
