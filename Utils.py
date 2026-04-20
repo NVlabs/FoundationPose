@@ -37,14 +37,16 @@ import ruamel.yaml
 yaml = ruamel.yaml.YAML()
 code_dir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(code_dir)
-# sys.path.append(f"{code_dir}/mycpp/build")
 try:
   import kornia
-except:
+except Exception:
   kornia = None
 try:
-  import mycpp.build.mycpp as mycpp
-except:
+  _mycpp_build = os.path.join(code_dir, 'mycpp', 'build')
+  if os.path.isdir(_mycpp_build):
+    sys.path.insert(0, _mycpp_build)
+  import mycpp
+except Exception:
   mycpp = None
 try:
   from bundlesdf.mycuda import common

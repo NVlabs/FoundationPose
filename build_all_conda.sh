@@ -1,14 +1,23 @@
-PROJ_ROOT=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+#!/usr/bin/env bash
+# Build native extensions for a local conda environment.
+# BundleSDF CUDA ops (bundlesdf/mycuda) are omitted; model-free NeRF path needs them separately.
+set -euo pipefail
 
-# Install mycpp
-cd ${PROJ_ROOT}/mycpp/ && \
-rm -rf build && mkdir -p build && cd build && \
-cmake .. && \
-make -j$(nproc)
+PROJ_ROOT="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
-# Install mycuda
-cd ${PROJ_ROOT}/bundlesdf/mycuda && \
-rm -rf build *egg* *.so && \
-python -m pip install -e .
+: "${CONDA_PREFIX:?Set CONDA_PREFIX by activating your conda env first.}"
 
-cd ${PROJ_ROOT}
+export CMAKE_PREFIX_PATH="${CONDA_PREFIX}:${CMAKE_PREFIX_PATH:-}"
+
+cd "${PROJ_ROOT}/mycpp"
+rm -rf build
+mkdir -p build
+cd build
+cmake .. \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" \
+  -DPython3_ROOT_DIR="${CONDA_PREFIX}" \
+  -DPYBIND11_PYTHON_EXECUTABLE="${CONDA_PREFIX}/bin/python"
+cmake --build . -j"$(nproc)"
+
+cd "${PROJ_ROOT}"
