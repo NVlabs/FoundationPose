@@ -416,12 +416,15 @@ class LinemodReader(LinemodOcclusionReader):
 
   def get_gt_mesh_file(self, ob_id):
     root = self.base_dir
-    while 1:
+    mesh_dir = None
+    while root!=os.path.abspath('/'):
       if os.path.exists(f'{root}/lm_models'):
         mesh_dir = f'{root}/lm_models/models/obj_{ob_id:06d}.ply'
         break
       else:
         root = os.path.abspath(f'{root}/../')
+    if mesh_dir == None:
+      raise FileNotFoundError("Can't find lm_models directory, please download it.")
     return mesh_dir
 
 
