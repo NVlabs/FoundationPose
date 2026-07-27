@@ -1,0 +1,292 @@
+name: Add submodule
+
+on:
+  workflow_dispatch:
+    inputs:
+      short_name:
+        description: "Submodule name, e.g. kr_ros2"
+        required: true
+        type: string
+      path:
+        description: "Path inside FuturHub, e.g. external/kr_ros2 or src/futur_code"
+        required: true
+        type: string
+      repo_url:
+        description: "Git URL, e.g. git@github.com:FuturHandRobotics/kr_ros2.git"
+        required: true
+        type: string
+      tracked_branch:
+        description: "Branch to track"
+        required: true
+        default: main
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  add-submodule:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout FuturHub
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+          token: ${{ secrets.FUTURHAND_SUBMODULE_UPDATE }}
+
+      - name: Configure git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Configure GitHub auth for private submodules
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.FUTURHAND_SUBMODULE_UPDATE }}@github.com/".insteadOf "https://github.com/"
+
+      - name: Convert SSH GitHub URL to HTTPS for Actions
+        id: normalize
+        run: |
+          set -Eeuo pipefail
+
+          url="${{ inputs.repo_url }}"
+
+          if [[ "$url" == git@github.com:* ]]; then
+            repo_path="${url#git@github.com:}"
+            repo_path="${repo_path%.git}"
+            url="https://github.com/${repo_path}.git"
+          else
+            repo_path="${url#https://github.com/}"
+            repo_path="${repo_path%.git}"
+          fi
+
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "repo_path=$repo_path" >> "$GITHUB_OUTPUT"
+
+      - name: Create child PR with notify-parent workflow
+        id: child_pr
+        env:
+          GH_TOKEN: ${{ secrets.FUTURHAND_SUBMODULE_UPDATE }}
+          CHILD_REPO: ${{ steps.normalize.outputs.repo_path }}
+          SHORT_NAME: ${{ inputs.short_name }}
+          PATH_IN_PARENT: ${{ inputs.path }}
+          TRACKED_BRANCH: ${{ inputs.tracked_branch }}
+        run: |
+          set -Eeuo pipefail
+
+          workdir="$(mktemp -d)"
+          git clone "https://github.com/${CHILD_REPO}.git" "$workdir/child"
+          cd "$workdir/child"
+
+          git fetch origin "$TRACKED_BRANCH"
+          git switch "$TRACKED_BRANCH"
+
+          branch="automation/add-notify-parent-${SHORT_NAME}"
+
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "Remote branch '$branch' already exists. Reusing it."
+            git fetch origin "$branch"
+            git switch -C "$branch" "origin/$branch"
+          else
+            echo "Remote branch '$branch' does not exist. Creating it from '$TRACKED_BRANCH'."
+            git switch -c "$branch"
+          fi
+
+          mkdir -p .github/workflows
+
+          SECRET_EXPR='$'
+          SECRET_EXPR="${SECRET_EXPR}{{ secrets.FUTURHAND_SUBMODULE_UPDATE }}"
+
+          REPO_EXPR='$'
+          REPO_EXPR="${REPO_EXPR}{{ steps.prep.outputs.repo }}"
+
+          cat > .github/workflows/notify-parent.yml <<'EOF'
+          name: Notify parent to bump submodule
+
+          on:
+            push:
+              branches: [ __TRACKED_BRANCH__ ] # <- Edit here to tracked branch
+            workflow_dispatch: {}
+
+          jobs:
+            notify:
+              runs-on: ubuntu-latest
+              steps:
+                - name: Prepare payload
+                  id: prep
+                  run: |
+                    echo "sha=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+                    echo "repo=${GITHUB_REPOSITORY}" >> "$GITHUB_OUTPUT"
+
+                - name: Dispatch to parent (FuturHub) # <- Edit here
+                  env:
+                    GH_PARENT_REPO: FuturHandRobotics/FuturHub  # <- Edit here
+                    GH_TOKEN: __SECRET_EXPR__
+                    SUBMODULE_PATH_IN_PARENT: __PATH_IN_PARENT__  # <- Edit here
+                    SHA: # Empty defaults to latest
+                    REPO: __REPO_EXPR__
+                  run: |
+                    set -Eeuo pipefail
+
+                    # Normalize PAT: strip CR/LF so gh can use it in Authorization header
+                    export GH_TOKEN="$(printf %s "$GH_TOKEN" | tr -d '\r\n')"
+
+                    payload=$(printf '{"event_type":"submodule_update","client_payload":{"submodule_path":"%s","sha":"%s","repo":"%s"}}' \
+                      "$SUBMODULE_PATH_IN_PARENT" "$SHA" "$REPO")
+
+                    echo "::group::Dispatch payload"
+                    echo "$payload"
+                    echo "::endgroup::"
+
+                    # Send request and capture body + status code (gh api → reliable JSON dispatch)
+                    echo "$payload" > payload.json
+                    resp_file="$(mktemp)"
+                    gh api "repos/${GH_PARENT_REPO}/dispatches" \
+                      -H "Accept: application/vnd.github+json" \
+                      -H "X-GitHub-Api-Version: 2022-11-28" \
+                      --input payload.json \
+                      -X POST \
+                      -i > "$resp_file"
+                    code="$(awk 'NR==1{print $2}' "$resp_file")"
+
+                    echo "::group::Response (HTTP $code)"
+                    # Body may be empty on success (204); still show for transparency
+                    if [ -s "$resp_file" ]; then cat "$resp_file"; else echo "<empty>"; fi
+                    echo "::endgroup::"
+
+                    case "$code" in
+                      204)
+                        echo "::notice title=Repository dispatch accepted::Parent=${GH_PARENT_REPO} path=${SUBMODULE_PATH_IN_PARENT} sha=${SHA}"
+                        ;;
+                      401|403)
+                        echo "::error title=Auth/Scope issue::HTTP $code. The PAT likely lacks access or is expired.
+                        - Ensure the token is a **fine-grained PAT** granted to **${GH_PARENT_REPO}**
+                        - Repo permissions: **Contents: Read and write**
+                        - Secret name is correct in this repo
+                        - Token not expired / revoked
+                        See response above for details."
+                        exit 1
+                        ;;
+                      404)
+                        echo "::error title=Not found / access denied::HTTP 404. Check:
+                        - GH_PARENT_REPO='${GH_PARENT_REPO}' is correct (owner/repo)
+                        - PAT has access to that repo (same org/owner, correct repo selection)
+                        - Repo is not private to a different owner without permission"
+                        exit 1
+                        ;;
+                      422|400)
+                        echo "::error title=Unprocessable payload::HTTP $code. Likely JSON shape, event_type, or required fields.
+                        - event_type should match parent workflow: 'submodule_update'
+                        - client_payload must include: submodule_path, sha, repo
+                        - Validate quotes/escaping in payload (shown above)"
+                        exit 1
+                        ;;
+                      5*)
+                        echo "::warning title=GitHub server error::HTTP $code. Transient issue—consider retry/backoff."
+
+                        # Optional quick retry (1x):
+                        sleep 2
+                        gh api "repos/${GH_PARENT_REPO}/dispatches" \
+                          -H "Accept: application/vnd.github+json" \
+                          -H "X-GitHub-Api-Version: 2022-11-28" \
+                          --input payload.json \
+                          -X POST \
+                          -i > "$resp_file"
+                        code2="$(awk 'NR==1{print $2}' "$resp_file")"
+
+                        echo "::notice::Retry status: $code2"
+                        if [ "$code2" != "204" ]; then
+                          echo "::error::Retry failed. See response above."
+                          exit 1
+                        fi
+                        ;;
+                      *)
+                        echo "::error title=Unexpected status::HTTP $code. Inspect response above. Visit: https://docs.github.com/rest"
+                        exit 1
+                        ;;
+                    esac
+          EOF
+
+          sed -i "s#__SECRET_EXPR__#${SECRET_EXPR}#g" .github/workflows/notify-parent.yml
+          sed -i "s#__TRACKED_BRANCH__#${TRACKED_BRANCH}#g" .github/workflows/notify-parent.yml
+          sed -i "s#__PATH_IN_PARENT__#${PATH_IN_PARENT}#g" .github/workflows/notify-parent.yml
+          sed -i "s#__REPO_EXPR__#${REPO_EXPR}#g" .github/workflows/notify-parent.yml
+
+          git add .github/workflows/notify-parent.yml
+
+          if git diff --cached --quiet; then
+            echo "No child workflow changes needed."
+
+            existing_url="$(gh pr list \
+              --repo "$CHILD_REPO" \
+              --head "$branch" \
+              --json url \
+              --jq '.[0].url // empty')"
+
+            echo "url=$existing_url" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git commit -m "ci: add notify parent workflow"
+          git push --set-upstream origin "$branch"
+
+          pr_url="$(gh pr create \
+            --repo "$CHILD_REPO" \
+            --base "$TRACKED_BRANCH" \
+            --head "$branch" \
+            --title "[Automated PR] Add notify-parent workflow" \
+            --body "Adds \`.github/workflows/notify-parent.yml\` so this repo can notify \`FuturHandRobotics/FuturHub\` when \`${TRACKED_BRANCH}\` moves.
+
+          Parent submodule path: \`${PATH_IN_PARENT}\`
+
+          ### Checklist
+
+          - [ ] Workflow branch matches tracked branch: \`${TRACKED_BRANCH}\`
+          - [ ] \`SUBMODULE_PATH_IN_PARENT\` is correct: \`${PATH_IN_PARENT}\`")"
+
+          echo "url=$pr_url" >> "$GITHUB_OUTPUT"
+
+      - name: Add submodule
+        run: |
+          set -Eeuo pipefail
+
+          short_name="${{ inputs.short_name }}"
+          path="${{ inputs.path }}"
+          tracked_branch="${{ inputs.tracked_branch }}"
+          repo_url="${{ steps.normalize.outputs.url }}"
+
+          git submodule add -b "$tracked_branch" --name "$short_name" "$repo_url" "$path"
+          git config -f .gitmodules "submodule.${short_name}.branch" "$tracked_branch"
+
+          git submodule sync -- "$path"
+          git submodule update --init "$path"
+
+          git add .gitmodules "$path"
+          # Convert recorded HTTPS URLs in .gitmodules to SSH form for repository consumers
+          sed -i 's#https://github.com/#git@github.com:#g' .gitmodules
+
+      - name: Create PR for new submodule
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: "${{ secrets.FUTURHAND_SUBMODULE_UPDATE }}"
+          commit-message: "chore(submodule): add ${{ inputs.short_name }}"
+          branch: "add/${{ inputs.short_name }}"
+          delete-branch: true
+          title: "[Automated PR] Add submodule ${{ inputs.short_name }}"
+          body: |
+            Adds `${{ inputs.short_name }}` as a submodule at `${{ inputs.path }}`, tracking branch `${{ inputs.tracked_branch }}`.
+
+            Child repo notify-parent PR: 
+            - ${{ steps.child_pr.outputs.url }}
+
+            ### Checklist
+
+            - [ ] `.gitmodules` contains the correct path and branch (`cat .gitmodules`)
+            - [ ] `git submodule status` lists the new submodule
+            - [ ] README [Existing Submodules section](https://github.com/FuturHandRobotics/FuturHub/tree/add/${{ inputs.short_name }}#existing-submodules) has been updated
+            - [ ] Child repo notify-parent PR has been merged: ${{ steps.child_pr.outputs.url }}
+          labels: |
+            submodule
+            automations

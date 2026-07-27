@@ -1,0 +1,216 @@
+name: Update submodule on dispatch
+
+on:
+  repository_dispatch:
+    types: [submodule_update]
+  workflow_dispatch:
+    inputs:
+      submodule_path:
+        description: Path of submodule in this repo (e.g., futur_docker, src/futur_code)  # <- Edit here
+        required: true
+        type: string
+      sha:
+        description: Pin to this commit (optional)
+        required: false
+        type: string
+      repo:
+        description: Source repo sending the update
+        required: true
+        type: string
+
+concurrency:
+  group: submodule-bump-${{ github.event.client_payload.submodule_path || inputs.submodule_path }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump-submodule:
+    runs-on: ubuntu-latest
+    # Pull values from repository_dispatch payload OR workflow_dispatch inputs
+    env:
+      SUBMODULE_PATH: ${{ github.event.client_payload.submodule_path || inputs.submodule_path }}
+      PIN_SHA:        ${{ github.event.client_payload.sha            || inputs.sha }}
+      SRC_REPO:       ${{ github.event.client_payload.repo           || inputs.repo }}
+    steps:
+      - name: Show incoming values
+        run: |
+          echo "SUBMODULE_PATH=${SUBMODULE_PATH}"
+          echo "PIN_SHA=${PIN_SHA:-<none>}"
+          echo "SRC_REPO=${SRC_REPO}"
+
+      - name: Checkout parent repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+
+      - name: Validate payload and submodule presence
+        id: validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUBMODULE_PATH:-}" || { echo "::error::Missing client_payload.submodule_path"; exit 1; }
+          if ! git config -f .gitmodules --get-regexp '^submodule\..*\.path$' | awk '{print $2}' | grep -xq "$SUBMODULE_PATH"; then
+            echo "::error::Submodule path '$SUBMODULE_PATH' not found in .gitmodules"
+            exit 1
+          fi
+          # Old commit (what's currently recorded for the submodule at HEAD)
+          OLD_SHA="$(git ls-tree HEAD -- "$SUBMODULE_PATH" | awk '{print $3}')"
+          echo "old_sha=$OLD_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Read submodule metadata (name + tracked branch)
+        id: submeta
+        shell: bash
+        run: |
+          set -euo pipefail
+          NAME="$(git config -f .gitmodules --get-regexp '^submodule\..*\.path$' \
+            | awk -v p="$SUBMODULE_PATH" '$2==p{match($1,/^submodule\.([^.]*)\.path$/,m); print m[1]}')"
+          BRANCH="$(git config -f .gitmodules --get "submodule.${NAME}.branch" || true)"
+          if [ -z "${BRANCH:-}" ]; then BRANCH=main; fi
+          echo "name=$NAME"    >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Sync submodule metadata (url/branch) once
+        run: git submodule sync -- "$SUBMODULE_PATH"
+
+      - name: Authenticate for submodules (force HTTPS for target)
+        env:
+          SUBMODULES_PAT: ${{ secrets.FUTURHAND_SUBMODULE_UPDATE }}  # PAT with Contents:read on child repo(s)
+          SUBMODULE_PATH: ${{ env.SUBMODULE_PATH }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUBMODULES_PAT:-}" ]; then
+            echo "::error::FUTURHAND_SUBMODULE_UPDATE is empty. Add the PAT secret in the parent repo."
+            exit 1
+          fi
+
+          # Optional global rewrites as a safety net
+          git config --global url."https://x-access-token:${SUBMODULES_PAT}@github.com/".insteadOf ssh://git@github.com/
+          git config --global url."https://x-access-token:${SUBMODULES_PAT}@github.com/".insteadOf git@github.com:
+          git config --global url."https://x-access-token:${SUBMODULES_PAT}@github.com/".insteadOf https://github.com/
+
+          # Resolve submodule <name> for the given path
+          name="$(git config -f .gitmodules --get-regexp '^submodule\..*\.path$' \
+            | awk -v p="$SUBMODULE_PATH" '$2==p{match($1,/^submodule\.([^.]*)\.path$/,m); print m[1]}')"
+          if [ -z "${name:-}" ]; then
+            echo "::error::Could not resolve submodule name for path '${SUBMODULE_PATH}'"
+            exit 1
+          fi
+
+          # Build tokenized HTTPS URL and override in local config ONLY (do not sync afterwards)
+          orig_url="$(git config -f .gitmodules --get "submodule.${name}.url")"
+          case "$orig_url" in
+            git@github.com:*) repo="${orig_url#git@github.com:}";;
+            https://github.com/*) repo="${orig_url#https://github.com/}";;
+            *) repo="$orig_url";;
+          esac
+          https="https://x-access-token:${SUBMODULES_PAT}@github.com/${repo}"
+          git config submodule."$name".url "$https"
+
+          echo "::notice::Effective submodule URL now: $(git config --get submodule."$name".url)"
+
+      - name: Initialize submodule (robust)
+        run: |
+          set -euo pipefail
+          # This will use the overridden HTTPS+PAT URL from .git/config
+          if ! git submodule update --init "$SUBMODULE_PATH"; then
+            echo "::warning::Init failed; cleaning path and retrying"
+            rm -rf -- "$SUBMODULE_PATH"
+            git submodule update --init "$SUBMODULE_PATH"
+          fi
+
+      - name: Update submodule to desired commit or tracked branch
+        id: update
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Ensure we have full history in the submodule (no shallow surprises)
+          git -C "$SUBMODULE_PATH" fetch --tags origin "+refs/heads/*:refs/remotes/origin/*" || true
+
+          if [ -n "${PIN_SHA:-}" ]; then
+            # Pin to specific commit from payload, if it exists remotely
+            if git -C "$SUBMODULE_PATH" cat-file -e "${PIN_SHA}^{commit}" 2>/dev/null; then
+              git -C "$SUBMODULE_PATH" checkout --detach "$PIN_SHA"
+            else
+              echo "::warning::PIN_SHA ${PIN_SHA} not found after fetch; falling back to tracked branch"
+              git submodule update --remote "$SUBMODULE_PATH"
+            fi
+          else
+            # Follow tracked branch from .gitmodules
+            git submodule update --remote "$SUBMODULE_PATH"
+          fi
+
+          # Final sanity: ensure the submodule worktree is detached at a commit
+          NEW_SHA="$(git -C "$SUBMODULE_PATH" rev-parse HEAD)"
+          echo "new_sha=$NEW_SHA" >> "$GITHUB_OUTPUT"
+
+          # Stage the submodule change in the parent
+          git add "$SUBMODULE_PATH"
+
+          if git diff --cached --quiet -- "$SUBMODULE_PATH"; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No change detected for $SUBMODULE_PATH (already at $NEW_SHA)"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Detected update for $SUBMODULE_PATH -> $NEW_SHA"
+          fi
+
+      - name: Create PR for submodule bump
+        if: steps.update.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.FUTURHAND_SUBMODULE_UPDATE }}
+          commit-message: |
+            chore(submodule): bump ${{ env.SUBMODULE_PATH }} to ${{ steps.update.outputs.new_sha }}
+          branch: bump/${{ env.SUBMODULE_PATH }}
+          delete-branch: true
+          title: |
+            [Automated PR] Bump submodule ${{ env.SUBMODULE_PATH }} to ${{ steps.update.outputs.new_sha }}
+          body: |
+            ### Summary
+            <!-- Provide a short summary of the changes -->
+            Bump submodule `${{ env.SUBMODULE_PATH }}` to commit `${{ steps.update.outputs.new_sha }}`.
+
+            Trigger source: `${{ env.SRC_REPO }}` payload${{ env.PIN_SHA && format(' pinned to `{0}`', env.PIN_SHA) || ' (tracked branch head)' }}.
+
+            Previous submodule commit recorded in parent: `${{ steps.validate.outputs.old_sha }}`.
+
+            ### Related Issues
+            <!-- Link any related issues -->
+            N/A
+
+            ### Pull requests that need to be reviewed before this one
+            N/A
+
+            ### Changes
+            - Update gitlink for `${{ env.SUBMODULE_PATH }}` to `${{ steps.update.outputs.new_sha }}`
+
+            ### Testing
+            <!-- Describe how the changes were tested -->
+            - Dispatch received and validated (`repository_dispatch` → `submodule_update`).
+            - Submodule initialized/synced and updated (pin or tracked branch).
+            - Parent tree reflects new gitlink; CI should verify build against updated submodule.
+
+            ### Reviewer checklist
+            - [ ] **Diff matches the PR title** (path `${{ env.SUBMODULE_PATH }}` → `${{ steps.update.outputs.new_sha }}`) and **makes only that change**  
+                  _Tip: Files changed should be 1; “1 insertion, 1 deletion” on the submodule entry._
+
+
+            - [ ] **Commit exists on the child repo’s tracked branch** and is the latest commit  
+                  Child branch: [`${{ env.SRC_REPO }}@${{ steps.submeta.outputs.branch }}`](https://github.com/${{ env.SRC_REPO }}/tree/${{ steps.submeta.outputs.branch }})  
+                  Commits feed: https://github.com/${{ env.SRC_REPO }}/commits/${{ steps.submeta.outputs.branch }}  
+                  This commit: https://github.com/${{ env.SRC_REPO }}/commit/${{ steps.update.outputs.new_sha }}
+
+                  
+            - [ ] Approve and merge! It's best we don't keep these automated PRs lingering for too long!
+
+          labels: |
+            submodule
+            automation
+
+      - name: Nothing to do (already up to date)
+        if: steps.update.outputs.changed != 'true'
+        run: echo "Submodule up to date; no PR opened."

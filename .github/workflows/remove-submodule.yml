@@ -1,0 +1,216 @@
+name: Remove submodule
+
+on:
+  workflow_dispatch:
+    inputs:
+      short_name:
+        description: "Submodule name, e.g. kr_ros2"
+        required: true
+        type: string
+      path:
+        description: "Path inside FuturHub, e.g. external/kr_ros2 or src/futur_code"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  remove-submodule:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout FuturHub
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+          token: "${{ secrets.FUTURHAND_SUBMODULE_UPDATE }}"
+
+      - name: Configure git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Configure GitHub auth for private submodules
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.FUTURHAND_SUBMODULE_UPDATE }}@github.com/".insteadOf "https://github.com/"
+
+      - name: Read submodule info
+        id: submodule_info
+        run: |
+          set -Eeuo pipefail
+
+          path="${{ inputs.path }}"
+
+          matching_key=""
+          while read -r key; do
+            value="$(git config -f .gitmodules --get "$key")"
+            if [[ "$value" == "$path" ]]; then
+              matching_key="$key"
+              break
+            fi
+          done < <(git config -f .gitmodules --name-only --get-regexp '^submodule\..*\.path$')
+
+          if [[ -z "$matching_key" ]]; then
+            echo "::error::Submodule path '$path' not found in .gitmodules"
+            exit 1
+          fi
+
+          section="${matching_key%.path}"
+
+          repo_url="$(git config -f .gitmodules --get "${section}.url")"
+          tracked_branch="$(git config -f .gitmodules --get "${section}.branch" || echo main)"
+
+          if [[ "$repo_url" == git@github.com:* ]]; then
+            repo_path="${repo_url#git@github.com:}"
+            repo_path="${repo_path%.git}"
+            https_url="https://github.com/${repo_path}.git"
+          else
+            repo_path="${repo_url#https://github.com/}"
+            repo_path="${repo_path%.git}"
+            https_url="https://github.com/${repo_path}.git"
+          fi
+
+          echo "section=$section" >> "$GITHUB_OUTPUT"
+          echo "repo_url=$repo_url" >> "$GITHUB_OUTPUT"
+          echo "https_url=$https_url" >> "$GITHUB_OUTPUT"
+          echo "repo_path=$repo_path" >> "$GITHUB_OUTPUT"
+          echo "tracked_branch=$tracked_branch" >> "$GITHUB_OUTPUT"
+
+      - name: Create child PR removing notify-parent workflow
+        id: child_pr
+        env:
+          GH_TOKEN: ${{ secrets.FUTURHAND_SUBMODULE_UPDATE }}
+          CHILD_REPO: ${{ steps.submodule_info.outputs.repo_path }}
+          SHORT_NAME: ${{ inputs.short_name }}
+          PATH_IN_PARENT: ${{ inputs.path }}
+          TRACKED_BRANCH: ${{ steps.submodule_info.outputs.tracked_branch }}
+        run: |
+          set -Eeuo pipefail
+
+          workdir="$(mktemp -d)"
+          git clone "https://github.com/${CHILD_REPO}.git" "$workdir/child"
+          cd "$workdir/child"
+
+          git fetch origin "$TRACKED_BRANCH"
+          git switch "$TRACKED_BRANCH"
+
+          branch="automation/remove-notify-parent-${SHORT_NAME}"
+
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "Remote branch '$branch' already exists. Reusing it."
+            git fetch origin "$branch"
+            git switch -C "$branch" "origin/$branch"
+          else
+            echo "Remote branch '$branch' does not exist. Creating it from '$TRACKED_BRANCH'."
+            git switch -c "$branch"
+          fi
+
+          if [[ ! -f ".github/workflows/notify-parent.yml" ]]; then
+            echo "No .github/workflows/notify-parent.yml found in child repo."
+
+            existing_url="$(gh pr list \
+              --repo "$CHILD_REPO" \
+              --head "$branch" \
+              --json url \
+              --jq '.[0].url // empty')"
+
+            if [[ -n "$existing_url" ]]; then
+              echo "url=$existing_url" >> "$GITHUB_OUTPUT"
+            else
+              echo "url=Not needed; child repo has no notify-parent workflow" >> "$GITHUB_OUTPUT"
+            fi
+
+            exit 0
+          fi
+
+          git rm .github/workflows/notify-parent.yml
+
+          if git diff --cached --quiet; then
+            echo "No child workflow changes needed."
+
+            existing_url="$(gh pr list \
+              --repo "$CHILD_REPO" \
+              --head "$branch" \
+              --json url \
+              --jq '.[0].url // empty')"
+
+            echo "url=$existing_url" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git commit -m "ci: remove notify parent workflow"
+          git push --set-upstream origin "$branch"
+
+          existing_url="$(gh pr list \
+            --repo "$CHILD_REPO" \
+            --head "$branch" \
+            --json url \
+            --jq '.[0].url // empty')"
+
+          if [[ -n "$existing_url" ]]; then
+            pr_url="$existing_url"
+          else
+            pr_url="$(gh pr create \
+              --repo "$CHILD_REPO" \
+              --base "$TRACKED_BRANCH" \
+              --head "$branch" \
+              --title "[Automated PR] Remove notify-parent workflow" \
+              --body "Removes \`.github/workflows/notify-parent.yml\` because this repo is being removed as a submodule from \`FuturHandRobotics/FuturHub\`.
+
+          Former parent submodule path: \`${PATH_IN_PARENT}\`
+
+          ### Checklist
+
+          - [ ] Confirm this repo should no longer notify \`FuturHandRobotics/FuturHub\`
+          - [ ] Confirm \`.github/workflows/notify-parent.yml\` has been removed")"
+          fi
+
+          echo "url=$pr_url" >> "$GITHUB_OUTPUT"
+
+      - name: Remove submodule
+        run: |
+          set -Eeuo pipefail
+
+          short_name="${{ inputs.short_name }}"
+          path="${{ inputs.path }}"
+
+          if ! git config -f .gitmodules --get-regexp '^submodule\..*\.path$' | awk '{print $2}' | grep -xq "$path"; then
+            echo "::error::Submodule path '$path' not found in .gitmodules"
+            exit 1
+          fi
+
+          git submodule deinit -f -- "$path" || true
+          git rm -f "$path"
+          rm -rf ".git/modules/$path"
+
+          git submodule sync --recursive
+
+          git add .gitmodules || true
+
+      - name: Create PR for removed submodule
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: "${{ secrets.FUTURHAND_SUBMODULE_UPDATE }}"
+          commit-message: "chore(submodule): remove ${{ inputs.short_name }}"
+          branch: "remove/${{ inputs.short_name }}"
+          delete-branch: true
+          title: "[Automated PR] Remove submodule ${{ inputs.short_name }}"
+          body: |
+            Removes `${{ inputs.short_name }}` from `${{ inputs.path }}`.
+
+            Child repo notify-parent removal PR:
+            - ${{ steps.child_pr.outputs.url }}
+
+            ### Checklist
+
+            - [ ] Submodule path has been removed from `.gitmodules` (`cat .gitmodules`)
+            - [ ] Submodule gitlink has been removed from the repo (via `ls`)
+            - [ ] README [Existing Submodules section](https://github.com/FuturHandRobotics/FuturHub/tree/remove/${{ inputs.short_name }}#existing-submodules) has been updated
+            - [ ] Child repo notify-parent removal PR has been merged: ${{ steps.child_pr.outputs.url }}
+
+          labels: |
+            submodule
+            automation
