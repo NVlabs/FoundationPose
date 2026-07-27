@@ -184,9 +184,9 @@ Our training data include scenes using 3D assets from GSO and Objaverse, rendere
                           [0,-1,0,0],
                           [0,0,-1,0],
                           [0,0,0,1]]).astype(float)
-  W, H = camera_params["renderProductResolution"]
   with open(f'{base_dir}/camera_params/camera_params_000000.json','r') as ff:
     camera_params = json.load(ff)
+  W, H = camera_params["renderProductResolution"]
   world_in_glcam = np.array(camera_params['cameraViewTransform']).reshape(4,4).T
   cam_in_world = np.linalg.inv(world_in_glcam)@glcam_in_cvcam
   world_in_cam = np.linalg.inv(cam_in_world)
